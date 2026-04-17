@@ -1,5 +1,6 @@
 'use client';
 import { useApp, THRESHOLDS } from '@/lib/store';
+import type { PoolName } from '@/types';
 import { useRouter } from 'next/navigation';
 
 const SECTION_CARDS = [
