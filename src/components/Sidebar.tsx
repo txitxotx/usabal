@@ -10,6 +10,7 @@ interface SidebarProps {
 const NAV_ITEMS = [
   { label: 'Panel Principal', path: '/dashboard', icon: '⊞', perm: null },
   { label: 'Piscinas', path: '/dashboard/piscinas', icon: '🏊', perm: 'view_piscinas' },
+  { label: 'Recirculación', path: '/dashboard/recirculacion', icon: '🔄', perm: 'view_recirculacion' },
   { label: 'Contadores', path: '/dashboard/contadores', icon: '📊', perm: 'view_contadores' },
   { label: 'Legionella', path: '/dashboard/legionella', icon: '🧫', perm: 'view_legionella' },
   { label: 'Incendios', path: '/dashboard/incendios', icon: '🔥', perm: 'view_incendios' },
@@ -23,30 +24,15 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter();
   const unresolvedAlerts = alerts.filter(a => !a.resolved && a.type === 'danger').length;
 
-  const handleNav = (path: string) => {
-    router.push(path);
-    onClose();
-  };
+  const handleNav = (path: string) => { router.push(path); onClose(); };
 
   return (
     <>
-      {/* Overlay for mobile */}
       {open && (
-        <div
-          onClick={onClose}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 99, display: 'block' }}
-          className="md:hidden"
-        />
+        <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 99, display: 'block' }} className="md:hidden" />
       )}
-
       <aside
-        style={{
-          position: 'fixed', top: 0, left: 0, bottom: 0, width: '240px',
-          background: '#fff', borderRight: '1px solid #e2eaf4',
-          zIndex: 100, display: 'flex', flexDirection: 'column',
-          transform: open ? 'translateX(0)' : undefined,
-          transition: 'transform 0.3s ease',
-        }}
+        style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '240px', background: '#fff', borderRight: '1px solid #e2eaf4', zIndex: 100, display: 'flex', flexDirection: 'column', transform: open ? 'translateX(0)' : undefined, transition: 'transform 0.3s ease' }}
         className={`sidebar ${open ? 'open' : ''}`}
       >
         {/* Logo */}
@@ -72,17 +58,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             if (item.perm && !hasPermission(item.perm as any)) return null;
             const isActive = pathname === item.path;
             return (
-              <button
-                key={item.path}
-                className={`sidebar-link ${isActive ? 'active' : ''}`}
-                onClick={() => handleNav(item.path)}
-              >
+              <button key={item.path} className={`sidebar-link ${isActive ? 'active' : ''}`} onClick={() => handleNav(item.path)}>
                 <span style={{ fontSize: '15px' }}>{item.icon}</span>
                 <span style={{ flex: 1 }}>{item.label}</span>
                 {item.label === 'Alertas' && unresolvedAlerts > 0 && (
-                  <span style={{ background: '#dc2626', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '11px', fontWeight: '700' }}>
-                    {unresolvedAlerts}
-                  </span>
+                  <span style={{ background: '#dc2626', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '11px', fontWeight: '700' }}>{unresolvedAlerts}</span>
                 )}
               </button>
             );
