@@ -142,10 +142,10 @@ export default function DashboardHome() {
               </thead>
               <tbody>
                 {Object.keys(lastParam.params.cloroLibre).map(pool => {
-const cl = lastParam.params.cloroLibre[pool as PoolName];
-const cc = lastParam.params.cloroCombinado[pool as PoolName];
-const ph = lastParam.params.ph[pool as PoolName];
-const temp = lastParam.params.temperatura[pool as PoolName];
+                  const cl = lastParam.params.cloroLibre[pool as PoolName];
+                  const cc = lastParam.params.cloroCombinado[pool as PoolName];
+                  const ph = lastParam.params.ph[pool as PoolName];
+                  const temp = lastParam.params.temperatura[pool as PoolName];
                   const clOk = cl === null || (cl >= 0.5 && cl <= 2.0);
                   const ccOk = cc === null || cc <= 0.6;
                   const phOk = ph === null || (ph >= 7.2 && ph <= 7.8);
