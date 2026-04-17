@@ -1,6 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { useApp, THRESHOLDS } from '@/lib/store';
+import type { PoolName } from '@/types';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 
 const POOLS = ['P. Grande', 'P. Peq.-Med.', 'SPA', 'Pileta'] as const;
@@ -100,9 +101,9 @@ export default function PiscinasPage() {
               if (!last) return null;
               const params = last.params;
               const issues: string[] = [];
-              const cl = params.cloroLibre[pool as any];
-              const cc = params.cloroCombinado[pool as any];
-              const ph = params.ph[pool as any];
+              const cl = params.cloroLibre[pool as PoolName];
+              const cc = params.cloroCombinado[pool as PoolName];
+              const ph = params.ph[pool as PoolName];
               if (cl !== null && (cl < THRESHOLDS.cloroLibre.min || cl > THRESHOLDS.cloroLibre.max)) issues.push('Cloro libre');
               if (cc !== null && cc > THRESHOLDS.cloroCombinado.max) issues.push('Cloro combinado');
               if (ph !== null && (ph < THRESHOLDS.ph.min || ph > THRESHOLDS.ph.max)) issues.push('pH');
@@ -117,7 +118,7 @@ export default function PiscinasPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {PARAMS_META.map(pm => {
-                      const val = (params as any)[pm.key]?.[pool as any];
+                      const val = (params as any)[pm.key]?.[pool as PoolName];
                       return (
                         <div key={pm.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '12px', color: '#64748b' }}>{pm.label}</span>
@@ -241,11 +242,11 @@ export default function PiscinasPage() {
                     <td style={{ fontWeight: '500', whiteSpace: 'nowrap' }}>{rec.date}</td>
                     {POOLS.map(pool => (
                       <>
-                        <td key={`${pool}-cl`} className={valueClass(rec.params.cloroLibre[pool as any], 0.5, 2.0)} style={{ borderLeft: '2px solid #f1f5f9', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.cloroLibre[pool as any]?.toFixed(2) ?? '—'}</td>
-                        <td key={`${pool}-cc`} className={valueClass(rec.params.cloroCombinado[pool as any], 0, 0.6)} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.cloroCombinado[pool as any]?.toFixed(2) ?? '—'}</td>
-                        <td key={`${pool}-ph`} className={valueClass(rec.params.ph[pool as any], 7.2, 7.8)} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.ph[pool as any]?.toFixed(2) ?? '—'}</td>
-                        <td key={`${pool}-temp`} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.temperatura[pool as any]?.toFixed(1) ?? '—'}</td>
-                        <td key={`${pool}-turb`} className={valueClass(rec.params.turbidez[pool as any], 0, 0.5)} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.turbidez[pool as any]?.toFixed(2) ?? '—'}</td>
+                        <td key={`${pool}-cl`} className={valueClass(rec.params.cloroLibre[pool as PoolName], 0.5, 2.0)} style={{ borderLeft: '2px solid #f1f5f9', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.cloroLibre[pool as PoolName]?.toFixed(2) ?? '—'}</td>
+                        <td key={`${pool}-cc`} className={valueClass(rec.params.cloroCombinado[pool as PoolName], 0, 0.6)} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.cloroCombinado[pool as PoolName]?.toFixed(2) ?? '—'}</td>
+                        <td key={`${pool}-ph`} className={valueClass(rec.params.ph[pool as PoolName], 7.2, 7.8)} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.ph[pool as PoolName]?.toFixed(2) ?? '—'}</td>
+                        <td key={`${pool}-temp`} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.temperatura[pool as PoolName]?.toFixed(1) ?? '—'}</td>
+                        <td key={`${pool}-turb`} className={valueClass(rec.params.turbidez[pool as PoolName], 0, 0.5)} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{rec.params.turbidez[pool as PoolName]?.toFixed(2) ?? '—'}</td>
                       </>
                     ))}
                   </tr>
