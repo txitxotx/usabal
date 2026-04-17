@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { User, Permission, Alert, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord } from '@/types';
+import type { User, Permission, Alert, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord, PoolName } from '@/types';
 
 // ─── Default Users ───────────────────────────────────────────────────────────
 const DEFAULT_USERS: User[] = [
@@ -123,7 +123,7 @@ function generateParametros(): PoolParamRecord[] {
     if (d > 31 && d <= 59) date.setMonth(1, d - 31);
     if (d > 59) date.setMonth(2, d - 59);
     const dateStr = date.toISOString().split('T')[0];
-    const poolData: Record<string, Record<string, number | null>> = {
+    const poolData: PoolParamRecord['params'] = {
       cloroLibre: {}, cloroCombinado: {}, ph: {}, temperatura: {}, turbidez: {}
     };
     POOLS.forEach(pool => {
