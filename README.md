@@ -39,6 +39,7 @@ Dashboard profesional para gestión de instalaciones acuáticas: piscinas, conta
 ```bash
 npm install
 npm run dev
+
 ```
 
 Abre http://localhost:3000
