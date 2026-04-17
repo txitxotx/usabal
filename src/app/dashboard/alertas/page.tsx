@@ -28,7 +28,7 @@ export default function AlertasPage() {
     resolved: alerts.filter(a => a.resolved).length,
   };
 
-  const sections = [...new Set(alerts.map(a => a.section))];
+  const sections = Array.from(new Set(alerts.map(a => a.section)));
 
   return (
     <div>
