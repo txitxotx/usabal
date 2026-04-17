@@ -65,7 +65,7 @@ export default function UsuariosPage() {
     }
   };
 
-  const sections = [...new Set(ALL_PERMISSIONS.map(p => p.section))];
+  const sections = Array.from(new Set(ALL_PERMISSIONS.map(p => p.section)));
 
   const PermissionsEditor = ({ perms, onToggle }: { perms: Permission[]; onToggle: (p: Permission) => void }) => (
     <div>
