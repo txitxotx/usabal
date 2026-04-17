@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { User, Permission, Alert, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord } from '@/types';
+import type { User, Permission, Alert, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord, PoolName } from '@/types';
 
 // ─── Default Users ───────────────────────────────────────────────────────────
 const DEFAULT_USERS: User[] = [
