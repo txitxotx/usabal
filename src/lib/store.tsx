@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { User, Permission, Alert, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord, PoolName } from '@/types';
+import type { User, Permission, Alert, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord } from '@/types';
 
 // ─── Default Users ───────────────────────────────────────────────────────────
 const DEFAULT_USERS: User[] = [
@@ -123,17 +123,15 @@ function generateParametros(): PoolParamRecord[] {
     if (d > 31 && d <= 59) date.setMonth(1, d - 31);
     if (d > 59) date.setMonth(2, d - 59);
     const dateStr = date.toISOString().split('T')[0];
-    const poolData: PoolParamRecord['params'] = {
-      cloroLibre: {}, cloroCombinado: {}, ph: {}, temperatura: {}, turbidez: {}
+    const mk = (fn: () => number | null) => Object.fromEntries(POOLS.map(p => [p, fn()])) as unknown as Record<PoolName, number | null>;
+    const params: PoolParamRecord['params'] = {
+      cloroLibre:      mk(() => randomBetween(0.4, 2.2, 2)),
+      cloroCombinado:  mk(() => randomBetween(0.05, 0.75, 2)),
+      ph:              mk(() => randomBetween(7.1, 7.9, 2)),
+      temperatura:     mk(() => randomBetween(25, 31, 1)),
+      turbidez:        mk(() => randomBetween(0.1, 0.6, 2)),
     };
-    POOLS.forEach(pool => {
-      poolData.cloroLibre[pool] = randomBetween(0.4, 2.2, 2);
-      poolData.cloroCombinado[pool] = randomBetween(0.05, 0.75, 2);
-      poolData.ph[pool] = randomBetween(7.1, 7.9, 2);
-      poolData.temperatura[pool] = randomBetween(25, 31, 1);
-      poolData.turbidez[pool] = randomBetween(0.1, 0.6, 2);
-    });
-    records.push({ id: `p${d}`, date: dateStr, params: poolData as PoolParamRecord['params'] });
+    records.push({ id: `p${d}`, date: dateStr, params });
   }
   return records;
 }
