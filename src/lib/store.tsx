@@ -206,10 +206,10 @@ function generateAlerts(
   parametros: PoolParamRecord[],
   legTemps: LegionellaTemp[],
   legBiocida: LegionellaBiocida[],
+  activePools: PoolName[],
 ): Alert[] {
   const alerts: Alert[] = [];
   let aIdx = 0;
-  const activePools = BASE_POOLS as unknown as PoolName[];
 
   parametros.forEach(rec => {
     activePools.forEach(pool => {
@@ -296,14 +296,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('aq_users');
-      return saved ? JSON.parse(saved) : DEFAULT_USERS;
+      if (saved) {
+        const stored: User[] = JSON.parse(saved);
+        // Always sync permissions from DEFAULT_USERS for known IDs to pick up new permissions
+        return stored.map(u => {
+          const def = DEFAULT_USERS.find(d => d.id === u.id);
+          return def ? { ...u, permissions: def.permissions } : u;
+        });
+      }
     }
     return DEFAULT_USERS;
   });
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('aq_session');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        const stored: User = JSON.parse(saved);
+        const def = DEFAULT_USERS.find(d => d.id === stored.id);
+        return def ? { ...stored, permissions: def.permissions } : stored;
+      }
+      return null;
     }
     return null;
   });
@@ -325,8 +337,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [alertHistory, setAlertHistory] = useState<Alert[]>([]);
 
   useEffect(() => {
-    setAlerts(generateAlerts(parametros, legionellaTemps, legionellaBiocida));
-  }, [parametros, legionellaTemps, legionellaBiocida]);
+    setAlerts(generateAlerts(parametros, legionellaTemps, legionellaBiocida, activePools));
+  }, [parametros, legionellaTemps, legionellaBiocida, activePools]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') localStorage.setItem('aq_users', JSON.stringify(users));
@@ -339,6 +351,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
   useEffect(() => {
     if (typeof window !== 'undefined') localStorage.setItem('aq_active_pools', JSON.stringify(activePools));
+    setParametros(generateParametros(activePools));
+    setRecirculacion(generateRecirculacion(activePools));
   }, [activePools]);
 
   const login = (email: string, password: string) => {
