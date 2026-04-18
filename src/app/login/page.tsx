@@ -16,7 +16,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     await new Promise(r => setTimeout(r, 300));
-    if (login(email, pass)) {
+   if (await login(email, pass)) {
       router.push('/dashboard');
     } else {
       setError('Email o contraseña incorrectos');
