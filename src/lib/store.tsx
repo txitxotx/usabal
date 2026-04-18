@@ -1,268 +1,104 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
 import type { User, Permission, Alert, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord, PoolName, RecirculacionEntry } from '@/types';
 import { BASE_POOLS, SEASONAL_POOLS } from '@/types';
 
-// ─── Default Users ────────────────────────────────────────────────────────────
-const DEFAULT_USERS: User[] = [
-  {
-    id: 'u1', name: 'Admin', email: 'admin@aquadash.com', password: 'admin123', role: 'admin',
-    permissions: [
-      'view_piscinas','view_recirculacion','view_contadores','view_legionella','view_incendios',
-      'edit_piscinas','edit_recirculacion','edit_contadores','edit_legionella','edit_incendios',
-      'view_alerts','manage_users','export_data'
-    ],
-    active: true, createdAt: '2026-01-01',
-  },
-  {
-    id: 'u2', name: 'Supervisor', email: 'supervisor@aquadash.com', password: 'super123', role: 'supervisor',
-    permissions: [
-      'view_piscinas','view_recirculacion','view_contadores','view_legionella','view_incendios',
-      'edit_piscinas','edit_recirculacion','edit_contadores','edit_legionella','edit_incendios',
-      'view_alerts','export_data'
-    ],
-    active: true, createdAt: '2026-01-01',
-  },
-  {
-    id: 'u3', name: 'Jon Operario', email: 'jon@aquadash.com', password: 'jon123', role: 'operario',
-    permissions: [
-      'view_piscinas','view_recirculacion','view_contadores','view_legionella','view_incendios',
-      'edit_piscinas','edit_recirculacion','edit_contadores','edit_legionella','edit_incendios',
-    ],
-    active: true, createdAt: '2026-01-01',
-  },
-  {
-    id: 'u4', name: 'Visitante', email: 'readonly@aquadash.com', password: 'view123', role: 'readonly',
-    permissions: ['view_piscinas','view_recirculacion','view_contadores','view_legionella','view_incendios'],
-    active: true, createdAt: '2026-01-01',
-  },
-];
-
 // ─── Thresholds ───────────────────────────────────────────────────────────────
 export const THRESHOLDS = {
-  cloroLibre: { min: 0.5, max: 2.0, unit: 'mg/L' },
-  cloroCombinado: { min: 0, max: 0.6, unit: 'mg/L' },
-  ph: { min: 7.2, max: 7.8, unit: '' },
-  turbidez: { min: 0, max: 0.5, unit: 'NTU' },
-  tempAgua: { min: 24, max: 30, unit: '°C' },
-  tempAmbiente: { min: 26, max: 33, unit: '°C' },
-  humedadRelativa: { min: 50, max: 70, unit: '%' },
-  co2Delta: { min: 0, max: 500, unit: 'ppm' }, // interior - exterior < 500
-  tempRetornoLegionella: { min: 50, max: 65, unit: '°C' },
-  tempDepositoLegionella: { min: 60, max: 70, unit: '°C' },
-  biocida: { min: 0.2, max: 2.0, unit: 'mg/L' },
-  phLegionella: { min: 7.0, max: 8.0, unit: '' },
+  cloroLibre:             { min: 0.5,  max: 2.0,  unit: 'mg/L' },
+  cloroCombinado:         { min: 0,    max: 0.6,  unit: 'mg/L' },
+  ph:                     { min: 7.2,  max: 7.8,  unit: '' },
+  turbidez:               { min: 0,    max: 0.5,  unit: 'NTU' },
+  tempAgua:               { min: 24,   max: 30,   unit: '°C' },
+  tempAmbiente:           { min: 26,   max: 33,   unit: '°C' },
+  humedadRelativa:        { min: 50,   max: 70,   unit: '%' },
+  co2Delta:               { min: 0,    max: 500,  unit: 'ppm' },
+  tempRetornoLegionella:  { min: 50,   max: 65,   unit: '°C' },
+  tempDepositoLegionella: { min: 60,   max: 70,   unit: '°C' },
+  biocida:                { min: 0.2,  max: 2.0,  unit: 'mg/L' },
+  phLegionella:           { min: 7.0,  max: 8.0,  unit: '' },
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function randomBetween(a: number, b: number, decimals = 2) {
-  return parseFloat((a + Math.random() * (b - a)).toFixed(decimals));
+// ─── DB row → app type mappers ────────────────────────────────────────────────
+function rowToParam(row: any): PoolParamRecord {
+  return {
+    id: row.id, date: row.date, session: row.session,
+    params: {
+      cloroLibre:      row.cloro_libre      ?? {},
+      cloroCombinado:  row.cloro_combinado  ?? {},
+      ph:              row.ph               ?? {},
+      temperatura:     row.temperatura      ?? {},
+      turbidez:        row.turbidez         ?? {},
+      tempAmbiente:    row.temp_ambiente    ?? null,
+      humedadRelativa: row.humedad_relativa ?? null,
+      co2Interior:     row.co2_interior     ?? null,
+      co2Exterior:     row.co2_exterior     ?? null,
+    },
+  };
 }
 
-// Spanish public holidays 2026 (approximate) - format MM-DD
-const HOLIDAYS_2026 = new Set([
-  '01-01','01-06','04-02','04-03','05-01','08-15','10-12','11-01','12-06','12-08','12-25'
-]);
-function isDomingo(date: Date) { return date.getDay() === 0; }
-function isFestivo(date: Date) {
-  const key = `${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-  return HOLIDAYS_2026.has(key);
-}
-function onlyMorning(date: Date) { return isDomingo(date) || isFestivo(date); }
-
-function generateContadores(): ContadorEntry[] {
-  const entries: ContadorEntry[] = [];
-  let agua = 90980, gas = 403305, aguaPisc = 212240;
-  for (let d = 1; d <= 90; d++) {
-    const date = new Date(2026, 0, d);
-    if (d > 31 && d <= 59) date.setMonth(1, d - 31);
-    if (d > 59) date.setMonth(2, d - 59);
-    const dow = date.getDay();
-    const accesos = dow === 0 || dow === 6 ? 0 : randomBetween(500, 2500, 0);
-    const aguaDiario = randomBetween(40, 110, 0);
-    const gasDiario = randomBetween(700, 1400, 0);
-    const aguaPiscDiario = randomBetween(20, 60, 0);
-    agua += aguaDiario; gas += gasDiario; aguaPisc += aguaPiscDiario;
-    entries.push({
-      id: `c${d}`, date: date.toISOString().split('T')[0],
-      accesos: Number(accesos), tempExterior: randomBetween(-2, 15, 1),
-      aguaGeneral: agua, aguaGeneralDiario: aguaDiario,
-      gas, gasDiario, aguaPiscinas: aguaPisc, aguaPiscinasDiario: aguaPiscDiario,
-      kwTolargi: randomBetween(3000, 5500, 0), urBeroa: 0,
-      electricidadNormal: randomBetween(200, 600, 0),
-      electricidadPreferente: randomBetween(50, 200, 0),
-    });
-  }
-  return entries;
+function rowToContador(row: any): ContadorEntry {
+  return {
+    id: row.id, date: row.date, accesos: row.accesos,
+    tempExterior: row.temp_exterior, aguaGeneral: row.agua_general,
+    aguaGeneralDiario: row.agua_general_diario, gas: row.gas, gasDiario: row.gas_diario,
+    aguaPiscinas: row.agua_piscinas, aguaPiscinasDiario: row.agua_piscinas_diario,
+    kwTolargi: row.kw_tolargi, urBeroa: row.ur_beroa,
+    electricidadNormal: row.electricidad_normal, electricidadPreferente: row.electricidad_preferente,
+  };
 }
 
-function generateParametros(activePools: PoolName[]): PoolParamRecord[] {
-  const records: PoolParamRecord[] = [];
-  let idx = 0;
-  for (let d = 1; d <= 90; d++) {
-    const date = new Date(2026, 0, d);
-    if (d > 31 && d <= 59) date.setMonth(1, d - 31);
-    if (d > 59) date.setMonth(2, d - 59);
-    const dateStr = date.toISOString().split('T')[0];
-    const mk = (fn: () => number | null) =>
-      Object.fromEntries(activePools.map(p => [p, fn()])) as unknown as Record<PoolName, number | null>;
-
-    const sessions: Array<'morning' | 'afternoon'> = onlyMorning(date) ? ['morning'] : ['morning', 'afternoon'];
-    for (const session of sessions) {
-      const co2Ext = randomBetween(380, 450, 0);
-      const co2Int = randomBetween(400, 900, 0); // sometimes > exterior+500
-      records.push({
-        id: `p${idx++}`, date: dateStr, session,
-        params: {
-          cloroLibre:      mk(() => randomBetween(0.4, 2.2, 2)),
-          cloroCombinado:  mk(() => randomBetween(0.05, 0.75, 2)),
-          ph:              mk(() => randomBetween(7.1, 7.9, 2)),
-          temperatura:     mk(() => randomBetween(25, 31, 1)),
-          turbidez:        mk(() => randomBetween(0.1, 0.6, 2)),
-          tempAmbiente:    randomBetween(26, 33, 1),
-          humedadRelativa: randomBetween(50, 70, 1),
-          co2Interior:     co2Int,
-          co2Exterior:     co2Ext,
-        },
-      });
-    }
-  }
-  return records;
+function rowToRecirculacion(row: any): RecirculacionEntry {
+  return {
+    id: row.id, date: row.date, pool: row.pool,
+    contadorRecirculacion: row.contador_recirculacion,
+    contadorDepuracion: row.contador_depuracion,
+    horasFiltraje: row.horas_filtraje,
+  };
 }
 
-function generateRecirculacion(activePools: PoolName[]): RecirculacionEntry[] {
-  const entries: RecirculacionEntry[] = [];
-  let idx = 0;
-  const baseCounters: Record<string, { recirc: number; dep: number }> = {};
-  activePools.forEach(p => { baseCounters[p] = { recirc: randomBetween(10000, 50000, 0), dep: randomBetween(5000, 20000, 0) }; });
-
-  for (let d = 1; d <= 90; d++) {
-    const date = new Date(2026, 0, d);
-    if (d > 31 && d <= 59) date.setMonth(1, d - 31);
-    if (d > 59) date.setMonth(2, d - 59);
-    const dateStr = date.toISOString().split('T')[0];
-    for (const pool of activePools) {
-      baseCounters[pool].recirc += randomBetween(200, 800, 0);
-      baseCounters[pool].dep += randomBetween(100, 400, 0);
-      entries.push({
-        id: `r${idx++}`, date: dateStr, pool,
-        contadorRecirculacion: Math.round(baseCounters[pool].recirc),
-        contadorDepuracion: Math.round(baseCounters[pool].dep),
-        horasFiltraje: randomBetween(18, 24, 1),
-      });
-    }
-  }
-  return entries;
+function rowToLegionellaTemp(row: any): LegionellaTemp {
+  return {
+    id: row.id, date: row.date, month: row.month,
+    tempRetorno: row.temp_retorno, tempDeposito1: row.temp_deposito1,
+    tempDeposito2: row.temp_deposito2, tempRamal1: row.temp_ramal1, tempRamal2: row.temp_ramal2,
+  };
 }
 
-function generateLegionellaTemps(): LegionellaTemp[] {
-  const entries: LegionellaTemp[] = [];
-  for (let d = 1; d <= 90; d++) {
-    const date = new Date(2026, 0, d);
-    if (d > 31 && d <= 59) date.setMonth(1, d - 31);
-    if (d > 59) date.setMonth(2, d - 59);
-    entries.push({
-      id: `lt${d}`, date: date.toISOString().split('T')[0],
-      month: ['Enero','Febrero','Marzo'][Math.floor((d-1)/30)],
-      tempRetorno: randomBetween(54, 62, 1), tempDeposito1: randomBetween(60, 66, 1), tempDeposito2: randomBetween(60, 66, 1),
-    });
-  }
-  return entries;
+function rowToLegionellaBiocida(row: any): LegionellaBiocida {
+  return {
+    id: row.id, date: row.date, biocida: row.biocida, ph: row.ph,
+    puntoDeMedida: row.punto_de_medida, nombre: row.nombre,
+  };
 }
 
-function generateLegionellaBiocida(): LegionellaBiocida[] {
-  const entries: LegionellaBiocida[] = [];
-  for (let d = 1; d <= 90; d++) {
-    const date = new Date(2026, 0, d);
-    if (d > 31 && d <= 59) date.setMonth(1, d - 31);
-    if (d > 59) date.setMonth(2, d - 59);
-    entries.push({
-      id: `lb${d}`, date: date.toISOString().split('T')[0],
-      biocida: randomBetween(0.15, 2.2, 2), ph: randomBetween(6.9, 8.1, 2),
-      puntoDeMedida: 'ENTRADA DE AGUA', nombre: 'JON',
-    });
-  }
-  return entries;
+function rowToIncendio(row: any): IncendioCheck {
+  return {
+    id: row.id, date: row.date, tipo: row.tipo, zona: row.zona,
+    resultado: row.resultado, observaciones: row.observaciones, responsable: row.responsable,
+  };
 }
 
-function generateIncendios(): IncendioCheck[] {
-  const zonas = ['Zona Piscinas','Vestuarios','Sala Máquinas','Recepción','Almacén'];
-  const tipos = ['Extintor','BIE','Detector humos','Salida emergencia','Rociador'];
-  const entries: IncendioCheck[] = [];
-  for (let d = 1; d <= 12; d++) {
-    zonas.forEach((zona, zi) => tipos.forEach((tipo, ti) => {
-      const rand = Math.random();
-      entries.push({
-        id: `i${d}_${zi}_${ti}`, date: new Date(2026, 0, d*7).toISOString().split('T')[0],
-        tipo, zona, resultado: rand > 0.93 ? 'FALLO' : rand > 0.85 ? 'PENDIENTE' : 'OK',
-        observaciones: rand > 0.93 ? 'Requiere revisión' : '', responsable: 'JON',
-      });
-    }));
-  }
-  return entries;
+function rowToAlert(row: any): Alert {
+  return {
+    id: row.id, type: row.type, section: row.section, pool: row.pool,
+    message: row.message, value: row.value, threshold: row.threshold,
+    timestamp: row.timestamp, resolved: row.resolved,
+    resolvedAt: row.resolved_at, resolvedValue: row.resolved_value, resolvedBy: row.resolved_by,
+  };
 }
 
-function generateAlerts(
-  parametros: PoolParamRecord[],
-  legTemps: LegionellaTemp[],
-  legBiocida: LegionellaBiocida[],
-  activePools: PoolName[],
-): Alert[] {
-  const alerts: Alert[] = [];
-  let aIdx = 0;
-
-  parametros.forEach(rec => {
-    activePools.forEach(pool => {
-      const cl = rec.params.cloroLibre[pool];
-      if (cl !== null && (cl < THRESHOLDS.cloroLibre.min || cl > THRESHOLDS.cloroLibre.max)) {
-        alerts.push({ id: `a${aIdx++}`, type: cl < 0.3 ? 'danger' : 'warning', section: 'piscinas', pool,
-          message: `Cloro libre fuera de rango en ${pool}`, value: cl,
-          threshold: `${THRESHOLDS.cloroLibre.min}-${THRESHOLDS.cloroLibre.max} mg/L`, timestamp: rec.date, resolved: false });
-      }
-      const cc = rec.params.cloroCombinado[pool];
-      if (cc !== null && cc > THRESHOLDS.cloroCombinado.max) {
-        alerts.push({ id: `a${aIdx++}`, type: cc > 1.0 ? 'danger' : 'warning', section: 'piscinas', pool,
-          message: `Cloro combinado alto en ${pool}`, value: cc,
-          threshold: `≤${THRESHOLDS.cloroCombinado.max} mg/L`, timestamp: rec.date, resolved: false });
-      }
-      const ph = rec.params.ph[pool];
-      if (ph !== null && (ph < THRESHOLDS.ph.min || ph > THRESHOLDS.ph.max)) {
-        alerts.push({ id: `a${aIdx++}`, type: 'warning', section: 'piscinas', pool,
-          message: `pH fuera de rango en ${pool}`, value: ph,
-          threshold: `${THRESHOLDS.ph.min}-${THRESHOLDS.ph.max}`, timestamp: rec.date, resolved: false });
-      }
-    });
-    // CO2 delta check
-    const { co2Interior, co2Exterior } = rec.params;
-    if (co2Interior !== null && co2Exterior !== null && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
-      alerts.push({ id: `a${aIdx++}`, type: 'warning', section: 'piscinas',
-        message: `CO2 interior elevado (diferencia exterior)`,
-        value: Math.round(co2Interior - co2Exterior), threshold: `≤${THRESHOLDS.co2Delta.max} ppm`,
-        timestamp: rec.date, resolved: false });
-    }
-  });
-
-  legTemps.forEach(t => {
-    if (t.tempRetorno < THRESHOLDS.tempRetornoLegionella.min) {
-      alerts.push({ id: `a${aIdx++}`, type: 'danger', section: 'legionella',
-        message: 'Temperatura retorno ACS por debajo del mínimo', value: t.tempRetorno,
-        threshold: `≥${THRESHOLDS.tempRetornoLegionella.min}°C`, timestamp: t.date, resolved: false });
-    }
-  });
-
-  legBiocida.forEach(b => {
-    if (b.biocida !== null && b.biocida < THRESHOLDS.biocida.min) {
-      alerts.push({ id: `a${aIdx++}`, type: 'warning', section: 'legionella',
-        message: 'Biocida por debajo del nivel mínimo', value: b.biocida,
-        threshold: `≥${THRESHOLDS.biocida.min} mg/L`, timestamp: b.date, resolved: false });
-    }
-  });
-
-  return alerts.sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 80);
+function rowToUser(row: any): User {
+  return {
+    id: row.id, name: row.name, email: row.email, password: row.password,
+    role: row.role, permissions: row.permissions, active: row.active, createdAt: row.created_at,
+  };
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 interface AppState {
+  loading: boolean;
   currentUser: User | null;
   users: User[];
   contadores: ContadorEntry[];
@@ -272,136 +108,260 @@ interface AppState {
   legionellaBiocida: LegionellaBiocida[];
   incendios: IncendioCheck[];
   alerts: Alert[];
+  alertHistory: Alert[];
   activePools: PoolName[];
-  alertHistory: Alert[]; // resolved alerts kept for history
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   hasPermission: (p: Permission) => boolean;
-  updateUser: (user: User) => void;
-  addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
-  deleteUser: (id: string) => void;
-  addContador: (entry: Omit<ContadorEntry, 'id'>) => void;
-  addPoolParam: (entry: Omit<PoolParamRecord, 'id'>) => void;
-  addRecirculacion: (entry: Omit<RecirculacionEntry, 'id'>) => void;
-  addLegionellaTemp: (entry: Omit<LegionellaTemp, 'id'>) => void;
-  addLegionellaBiocida: (entry: Omit<LegionellaBiocida, 'id'>) => void;
-  addIncendio: (entry: Omit<IncendioCheck, 'id'>) => void;
-  resolveAlert: (id: string, newValue: number | string, resolvedBy: string) => void;
-  toggleSeasonalPool: (pool: PoolName) => void;
+  updateUser: (user: User) => Promise<void>;
+  addUser: (user: Omit<User, 'id' | 'createdAt'>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  addContador: (entry: Omit<ContadorEntry, 'id'>) => Promise<void>;
+  addPoolParam: (entry: Omit<PoolParamRecord, 'id'>) => Promise<void>;
+  addRecirculacion: (entry: Omit<RecirculacionEntry, 'id'>) => Promise<void>;
+  addLegionellaTemp: (entry: Omit<LegionellaTemp, 'id'>) => Promise<void>;
+  addLegionellaBiocida: (entry: Omit<LegionellaBiocida, 'id'>) => Promise<void>;
+  addIncendio: (entry: Omit<IncendioCheck, 'id'>) => Promise<void>;
+  resolveAlert: (id: string, newValue: string, resolvedBy: string) => Promise<void>;
+  toggleSeasonalPool: (pool: PoolName) => Promise<void>;
+  generateAlertsFromData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<User[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('aq_users');
-      if (saved) {
-        const stored: User[] = JSON.parse(saved);
-        // Always sync permissions from DEFAULT_USERS for known IDs to pick up new permissions
-        return stored.map(u => {
-          const def = DEFAULT_USERS.find(d => d.id === u.id);
-          return def ? { ...u, permissions: def.permissions } : u;
-        });
-      }
-    }
-    return DEFAULT_USERS;
-  });
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('aq_session');
-      if (saved) {
-        const stored: User = JSON.parse(saved);
-        const def = DEFAULT_USERS.find(d => d.id === stored.id);
-        return def ? { ...stored, permissions: def.permissions } : stored;
-      }
-      return null;
-    }
-    return null;
-  });
-  const [activePools, setActivePools] = useState<PoolName[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('aq_active_pools');
-      return saved ? JSON.parse(saved) : [...BASE_POOLS];
-    }
-    return [...BASE_POOLS];
-  });
-
-  const [contadores] = useState<ContadorEntry[]>(() => generateContadores());
-  const [parametros, setParametros] = useState<PoolParamRecord[]>(() => generateParametros([...BASE_POOLS]));
-  const [recirculacion, setRecirculacion] = useState<RecirculacionEntry[]>(() => generateRecirculacion([...BASE_POOLS]));
-  const [legionellaTemps] = useState<LegionellaTemp[]>(() => generateLegionellaTemps());
-  const [legionellaBiocida] = useState<LegionellaBiocida[]>(() => generateLegionellaBiocida());
-  const [incendios] = useState<IncendioCheck[]>(() => generateIncendios());
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [contadores, setContadores] = useState<ContadorEntry[]>([]);
+  const [parametros, setParametros] = useState<PoolParamRecord[]>([]);
+  const [recirculacion, setRecirculacion] = useState<RecirculacionEntry[]>([]);
+  const [legionellaTemps, setLegionellaTemps] = useState<LegionellaTemp[]>([]);
+  const [legionellaBiocida, setLegionellaBiocida] = useState<LegionellaBiocida[]>([]);
+  const [incendios, setIncendios] = useState<IncendioCheck[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertHistory, setAlertHistory] = useState<Alert[]>([]);
+  const [activePools, setActivePools] = useState<PoolName[]>([...BASE_POOLS]);
 
+  // ─── Load all data on mount ─────────────────────────────────────────────────
   useEffect(() => {
-    setAlerts(generateAlerts(parametros, legionellaTemps, legionellaBiocida, activePools));
-  }, [parametros, legionellaTemps, legionellaBiocida, activePools]);
+    async function loadAll() {
+      setLoading(true);
+      try {
+        const [
+          { data: usersData },
+          { data: paramData },
+          { data: reciData },
+          { data: contData },
+          { data: legTempData },
+          { data: legBioData },
+          { data: incData },
+          { data: alertData },
+          { data: configData },
+        ] = await Promise.all([
+          supabase.from('users').select('*').order('created_at'),
+          supabase.from('parametros').select('*').order('date', { ascending: true }).order('session'),
+          supabase.from('recirculacion').select('*').order('date', { ascending: true }),
+          supabase.from('contadores').select('*').order('date', { ascending: true }),
+          supabase.from('legionella_temps').select('*').order('date', { ascending: true }),
+          supabase.from('legionella_biocida').select('*').order('date', { ascending: true }),
+          supabase.from('incendios').select('*').order('date', { ascending: true }),
+          supabase.from('alerts').select('*').order('timestamp', { ascending: false }),
+          supabase.from('app_config').select('*'),
+        ]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem('aq_users', JSON.stringify(users));
-  }, [users]);
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (currentUser) localStorage.setItem('aq_session', JSON.stringify(currentUser));
-      else localStorage.removeItem('aq_session');
+        if (usersData) setUsers(usersData.map(rowToUser));
+        if (paramData) setParametros(paramData.map(rowToParam));
+        if (reciData) setRecirculacion(reciData.map(rowToRecirculacion));
+        if (contData) setContadores(contData.map(rowToContador));
+        if (legTempData) setLegionellaTemps(legTempData.map(rowToLegionellaTemp));
+        if (legBioData) setLegionellaBiocida(legBioData.map(rowToLegionellaBiocida));
+        if (incData) setIncendios(incData.map(rowToIncendio));
+        if (alertData) {
+          setAlerts(alertData.filter((a: any) => !a.resolved).map(rowToAlert));
+          setAlertHistory(alertData.filter((a: any) => a.resolved).map(rowToAlert));
+        }
+        if (configData) {
+          const poolsConfig = configData.find((c: any) => c.key === 'active_pools');
+          if (poolsConfig) setActivePools(poolsConfig.value as PoolName[]);
+        }
+
+        // Restore session
+        const sessionId = sessionStorage.getItem('aq_session_id');
+        if (sessionId && usersData) {
+          const user = usersData.find((u: any) => u.id === sessionId);
+          if (user) setCurrentUser(rowToUser(user));
+        }
+      } catch (err) {
+        console.error('Error loading data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [currentUser]);
-  useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem('aq_active_pools', JSON.stringify(activePools));
-    setParametros(generateParametros(activePools));
-    setRecirculacion(generateRecirculacion(activePools));
-  }, [activePools]);
+    loadAll();
+  }, []);
 
-  const login = (email: string, password: string) => {
-    const user = users.find(u => u.email === email && u.password === password && u.active);
-    if (user) { setCurrentUser(user); return true; }
+  // ─── Auth ───────────────────────────────────────────────────────────────────
+  const login = async (email: string, password: string): Promise<boolean> => {
+    const { data } = await supabase.from('users').select('*').eq('email', email).eq('password', password).eq('active', true).single();
+    if (data) {
+      const user = rowToUser(data);
+      setCurrentUser(user);
+      sessionStorage.setItem('aq_session_id', user.id);
+      return true;
+    }
     return false;
   };
-  const logout = () => setCurrentUser(null);
+
+  const logout = () => {
+    setCurrentUser(null);
+    sessionStorage.removeItem('aq_session_id');
+  };
+
   const hasPermission = (p: Permission) => currentUser?.permissions.includes(p) ?? false;
-  const updateUser = (user: User) => {
+
+  // ─── Users ──────────────────────────────────────────────────────────────────
+  const updateUser = async (user: User) => {
+    await supabase.from('users').update({
+      name: user.name, email: user.email, password: user.password,
+      role: user.role, permissions: user.permissions, active: user.active,
+    }).eq('id', user.id);
     setUsers(prev => prev.map(u => u.id === user.id ? user : u));
     if (currentUser?.id === user.id) setCurrentUser(user);
   };
-  const addUser = (u: Omit<User, 'id' | 'createdAt'>) =>
-    setUsers(prev => [...prev, { ...u, id: `u${Date.now()}`, createdAt: new Date().toISOString().split('T')[0] }]);
-  const deleteUser = (id: string) => setUsers(prev => prev.filter(u => u.id !== id));
-  const addContador = (_e: Omit<ContadorEntry, 'id'>) => {};
-  const addPoolParam = (_e: Omit<PoolParamRecord, 'id'>) => {};
-  const addRecirculacion = (_e: Omit<RecirculacionEntry, 'id'>) => {};
-  const addLegionellaTemp = (_e: Omit<LegionellaTemp, 'id'>) => {};
-  const addLegionellaBiocida = (_e: Omit<LegionellaBiocida, 'id'>) => {};
-  const addIncendio = (_e: Omit<IncendioCheck, 'id'>) => {};
 
-  const resolveAlert = (id: string, newValue: number | string, resolvedBy: string) => {
+  const addUser = async (u: Omit<User, 'id' | 'createdAt'>) => {
+    const newUser = { ...u, id: `u${Date.now()}`, created_at: new Date().toISOString().split('T')[0] };
+    await supabase.from('users').insert(newUser);
+    setUsers(prev => [...prev, rowToUser(newUser)]);
+  };
+
+  const deleteUser = async (id: string) => {
+    await supabase.from('users').delete().eq('id', id);
+    setUsers(prev => prev.filter(u => u.id !== id));
+  };
+
+  // ─── Data inserts ────────────────────────────────────────────────────────────
+  const addContador = async (e: Omit<ContadorEntry, 'id'>) => {
+    const row = { id: `c${Date.now()}`, date: e.date, accesos: e.accesos, temp_exterior: e.tempExterior,
+      agua_general: e.aguaGeneral, agua_general_diario: e.aguaGeneralDiario,
+      gas: e.gas, gas_diario: e.gasDiario, agua_piscinas: e.aguaPiscinas,
+      agua_piscinas_diario: e.aguaPiscinasDiario, kw_tolargi: e.kwTolargi, ur_beroa: e.urBeroa,
+      electricidad_normal: e.electricidadNormal, electricidad_preferente: e.electricidadPreferente };
+    await supabase.from('contadores').insert(row);
+    setContadores(prev => [...prev, rowToContador(row)]);
+  };
+
+  const addPoolParam = async (e: Omit<PoolParamRecord, 'id'>) => {
+    const row = { id: `p${Date.now()}`, date: e.date, session: e.session,
+      cloro_libre: e.params.cloroLibre, cloro_combinado: e.params.cloroCombinado,
+      ph: e.params.ph, temperatura: e.params.temperatura, turbidez: e.params.turbidez,
+      temp_ambiente: e.params.tempAmbiente, humedad_relativa: e.params.humedadRelativa,
+      co2_interior: e.params.co2Interior, co2_exterior: e.params.co2Exterior };
+    await supabase.from('parametros').insert(row);
+    setParametros(prev => [...prev, rowToParam(row)]);
+    // Auto-generate alerts for this new record
+    await generateAlertsFromNewParam(rowToParam(row));
+  };
+
+  const addRecirculacion = async (e: Omit<RecirculacionEntry, 'id'>) => {
+    const row = { id: `r${Date.now()}`, date: e.date, pool: e.pool,
+      contador_recirculacion: e.contadorRecirculacion, contador_depuracion: e.contadorDepuracion,
+      horas_filtraje: e.horasFiltraje };
+    await supabase.from('recirculacion').insert(row);
+    setRecirculacion(prev => [...prev, rowToRecirculacion(row)]);
+  };
+
+  const addLegionellaTemp = async (e: Omit<LegionellaTemp, 'id'>) => {
+    const row = { id: `lt${Date.now()}`, date: e.date, month: e.month,
+      temp_retorno: e.tempRetorno, temp_deposito1: e.tempDeposito1,
+      temp_deposito2: e.tempDeposito2, temp_ramal1: e.tempRamal1, temp_ramal2: e.tempRamal2 };
+    await supabase.from('legionella_temps').insert(row);
+    setLegionellaTemps(prev => [...prev, rowToLegionellaTemp(row)]);
+  };
+
+  const addLegionellaBiocida = async (e: Omit<LegionellaBiocida, 'id'>) => {
+    const row = { id: `lb${Date.now()}`, date: e.date, biocida: e.biocida, ph: e.ph,
+      punto_de_medida: e.puntoDeMedida, nombre: e.nombre };
+    await supabase.from('legionella_biocida').insert(row);
+    setLegionellaBiocida(prev => [...prev, rowToLegionellaBiocida(row)]);
+  };
+
+  const addIncendio = async (e: Omit<IncendioCheck, 'id'>) => {
+    const row = { id: `i${Date.now()}`, date: e.date, tipo: e.tipo, zona: e.zona,
+      resultado: e.resultado, observaciones: e.observaciones, responsable: e.responsable };
+    await supabase.from('incendios').insert(row);
+    setIncendios(prev => [...prev, rowToIncendio(row)]);
+  };
+
+  // ─── Alerts ──────────────────────────────────────────────────────────────────
+  const resolveAlert = async (id: string, newValue: string, resolvedBy: string) => {
+    const resolvedAt = new Date().toISOString().split('T')[0];
+    await supabase.from('alerts').update({ resolved: true, resolved_at: resolvedAt, resolved_value: newValue, resolved_by: resolvedBy }).eq('id', id);
     setAlerts(prev => {
-      const updated = prev.map(a => a.id === id
-        ? { ...a, resolved: true, resolvedAt: new Date().toISOString().split('T')[0], resolvedValue: newValue, resolvedBy }
-        : a
-      );
-      const resolved = updated.find(a => a.id === id);
-      if (resolved) setAlertHistory(h => [...h, resolved]);
-      return updated;
+      const alert = prev.find(a => a.id === id);
+      if (alert) {
+        const resolved = { ...alert, resolved: true, resolvedAt, resolvedValue: newValue, resolvedBy };
+        setAlertHistory(h => [...h, resolved]);
+      }
+      return prev.filter(a => a.id !== id);
     });
   };
 
-  const toggleSeasonalPool = (pool: PoolName) => {
-    if (!SEASONAL_POOLS.includes(pool)) return; // can only toggle seasonal pools
-    setActivePools(prev =>
-      prev.includes(pool) ? prev.filter(p => p !== pool) : [...prev, pool]
-    );
+  async function generateAlertsFromNewParam(rec: PoolParamRecord) {
+    const newAlerts: any[] = [];
+    let idx = Date.now();
+    for (const pool of activePools) {
+      const cl = rec.params.cloroLibre[pool];
+      if (cl !== null && cl !== undefined && (cl < THRESHOLDS.cloroLibre.min || cl > THRESHOLDS.cloroLibre.max)) {
+        newAlerts.push({ id: `a${idx++}`, type: cl < 0.3 ? 'danger' : 'warning', section: 'piscinas', pool,
+          message: `Cloro libre fuera de rango en ${pool}`, value: String(cl),
+          threshold: `${THRESHOLDS.cloroLibre.min}-${THRESHOLDS.cloroLibre.max} mg/L`, timestamp: rec.date, resolved: false });
+      }
+      const cc = rec.params.cloroCombinado[pool];
+      if (cc !== null && cc !== undefined && cc > THRESHOLDS.cloroCombinado.max) {
+        newAlerts.push({ id: `a${idx++}`, type: cc > 1.0 ? 'danger' : 'warning', section: 'piscinas', pool,
+          message: `Cloro combinado alto en ${pool}`, value: String(cc),
+          threshold: `≤${THRESHOLDS.cloroCombinado.max} mg/L`, timestamp: rec.date, resolved: false });
+      }
+      const ph = rec.params.ph[pool];
+      if (ph !== null && ph !== undefined && (ph < THRESHOLDS.ph.min || ph > THRESHOLDS.ph.max)) {
+        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', pool,
+          message: `pH fuera de rango en ${pool}`, value: String(ph),
+          threshold: `${THRESHOLDS.ph.min}-${THRESHOLDS.ph.max}`, timestamp: rec.date, resolved: false });
+      }
+    }
+    const { co2Interior, co2Exterior } = rec.params;
+    if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
+      newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas',
+        message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)),
+        threshold: `≤${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false });
+    }
+    if (newAlerts.length > 0) {
+      await supabase.from('alerts').insert(newAlerts);
+      setAlerts(prev => [...newAlerts.map(rowToAlert), ...prev]);
+    }
+  }
+
+  const generateAlertsFromData = async () => {}; // kept for interface compatibility
+
+  // ─── Active pools ─────────────────────────────────────────────────────────
+  const toggleSeasonalPool = async (pool: PoolName) => {
+    if (!SEASONAL_POOLS.includes(pool)) return;
+    const next = activePools.includes(pool)
+      ? activePools.filter(p => p !== pool)
+      : [...activePools, pool];
+    setActivePools(next);
+    await supabase.from('app_config').upsert({ key: 'active_pools', value: next, updated_at: new Date().toISOString() });
   };
 
   return (
     <AppContext.Provider value={{
-      currentUser, users, contadores, parametros, recirculacion, legionellaTemps, legionellaBiocida,
-      incendios, alerts, activePools, alertHistory,
+      loading, currentUser, users, contadores, parametros, recirculacion,
+      legionellaTemps, legionellaBiocida, incendios, alerts, alertHistory, activePools,
       login, logout, hasPermission, updateUser, addUser, deleteUser,
       addContador, addPoolParam, addRecirculacion, addLegionellaTemp, addLegionellaBiocida, addIncendio,
-      resolveAlert, toggleSeasonalPool,
+      resolveAlert, toggleSeasonalPool, generateAlertsFromData,
     }}>
       {children}
     </AppContext.Provider>
