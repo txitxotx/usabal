@@ -4,12 +4,12 @@ import { supabase } from '@/lib/supabase';
 import type { User, Permission, Alert, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord, PoolName, RecirculacionEntry } from '@/types';
 import { BASE_POOLS, SEASONAL_POOLS } from '@/types';
 
-// ─── Thresholds ───────────────────────────────────────────────────────────────
+// ─── Thresholds globales ──────────────────────────────────────────────────────
 export const THRESHOLDS = {
   cloroLibre:             { min: 0.5,  max: 2.0,  unit: 'mg/L' },
   cloroCombinado:         { min: 0,    max: 0.6,  unit: 'mg/L' },
   ph:                     { min: 7.2,  max: 7.8,  unit: '' },
-  turbidez:               { min: 0,    max: 0.5,  unit: 'NTU' },
+  turbidez:               { min: 0,    max: 5.0,  unit: 'NTU' },
   tempAgua:               { min: 24,   max: 30,   unit: '°C' },
   tempAmbiente:           { min: 26,   max: 33,   unit: '°C' },
   humedadRelativa:        { min: 50,   max: 70,   unit: '%' },
@@ -20,20 +20,35 @@ export const THRESHOLDS = {
   phLegionella:           { min: 7.0,  max: 8.0,  unit: '' },
 };
 
-// ─── DB row → app type mappers ────────────────────────────────────────────────
+// ─── Umbrales de temperatura del agua por piscina ────────────────────────────
+export const TEMP_AGUA_THRESHOLDS: Record<string, { min: number; max: number }> = {
+  'P. Grande':       { min: 26,  max: 29   },
+  'P. Peq.-Med.':   { min: 28,  max: 32.5 },
+  'SPA':             { min: 30,  max: 33   },
+  'Pileta':          { min: 5,   max: 16   },
+  'P. Ext. Grande':  { min: 0,   max: 40   },
+  'P. Ext. Pequena': { min: 0,   max: 40   },
+  'Splash':          { min: 0,   max: 40   },
+};
+
+// ─── DB row -> app type mappers ───────────────────────────────────────────────
 function rowToParam(row: any): PoolParamRecord {
   return {
     id: row.id, date: row.date, session: row.session,
     params: {
-      cloroLibre:      row.cloro_libre      ?? {},
-      cloroCombinado:  row.cloro_combinado  ?? {},
-      ph:              row.ph               ?? {},
-      temperatura:     row.temperatura      ?? {},
-      turbidez:        row.turbidez         ?? {},
-      tempAmbiente:    row.temp_ambiente    ?? null,
-      humedadRelativa: row.humedad_relativa ?? null,
-      co2Interior:     row.co2_interior     ?? null,
-      co2Exterior:     row.co2_exterior     ?? null,
+      cloroLibre:         row.cloro_libre      ?? {},
+      cloroCombinado:     row.cloro_combinado  ?? {},
+      ph:                 row.ph               ?? {},
+      temperatura:        row.temperatura      ?? {},
+      turbidez:           row.turbidez         ?? {},
+      tempAmbiente:       row.temp_ambiente    ?? null,
+      humedadRelativa:    row.humedad_relativa ?? null,
+      co2Interior:        row.co2_interior     ?? null,
+      co2Exterior:        row.co2_exterior     ?? null,
+      tempAmbienteGrande: row.temp_ambiente_grande ?? null,
+      tempAmbienteSpa:    row.temp_ambiente_spa    ?? null,
+      humedadGrande:      row.humedad_grande       ?? null,
+      humedadSpa:         row.humedad_spa          ?? null,
     },
   };
 }
@@ -186,7 +201,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (poolsConfig) setActivePools(poolsConfig.value as PoolName[]);
         }
 
-        // Restore session
         const sessionId = sessionStorage.getItem('aq_session_id');
         if (sessionId && usersData) {
           const user = usersData.find((u: any) => u.id === sessionId);
@@ -243,53 +257,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ─── Data inserts ────────────────────────────────────────────────────────────
   const addContador = async (e: Omit<ContadorEntry, 'id'>) => {
-    const row = { id: `c${Date.now()}`, date: e.date, accesos: e.accesos, temp_exterior: e.tempExterior,
+    const row = {
+      id: `c${Date.now()}`, date: e.date, accesos: e.accesos, temp_exterior: e.tempExterior,
       agua_general: e.aguaGeneral, agua_general_diario: e.aguaGeneralDiario,
       gas: e.gas, gas_diario: e.gasDiario, agua_piscinas: e.aguaPiscinas,
       agua_piscinas_diario: e.aguaPiscinasDiario, kw_tolargi: e.kwTolargi, ur_beroa: e.urBeroa,
-      electricidad_normal: e.electricidadNormal, electricidad_preferente: e.electricidadPreferente };
+      electricidad_normal: e.electricidadNormal, electricidad_preferente: e.electricidadPreferente,
+    };
     await supabase.from('contadores').insert(row);
     setContadores(prev => [...prev, rowToContador(row)]);
   };
 
   const addPoolParam = async (e: Omit<PoolParamRecord, 'id'>) => {
-    const row = { id: `p${Date.now()}`, date: e.date, session: e.session,
+    const row = {
+      id: `p${Date.now()}`, date: e.date, session: e.session,
       cloro_libre: e.params.cloroLibre, cloro_combinado: e.params.cloroCombinado,
       ph: e.params.ph, temperatura: e.params.temperatura, turbidez: e.params.turbidez,
       temp_ambiente: e.params.tempAmbiente, humedad_relativa: e.params.humedadRelativa,
-      co2_interior: e.params.co2Interior, co2_exterior: e.params.co2Exterior };
+      co2_interior: e.params.co2Interior, co2_exterior: e.params.co2Exterior,
+      temp_ambiente_grande: e.params.tempAmbienteGrande,
+      temp_ambiente_spa:    e.params.tempAmbienteSpa,
+      humedad_grande:       e.params.humedadGrande,
+      humedad_spa:          e.params.humedadSpa,
+    };
     await supabase.from('parametros').insert(row);
     setParametros(prev => [...prev, rowToParam(row)]);
-    // Auto-generate alerts for this new record
     await generateAlertsFromNewParam(rowToParam(row));
   };
 
   const addRecirculacion = async (e: Omit<RecirculacionEntry, 'id'>) => {
-    const row = { id: `r${Date.now()}`, date: e.date, pool: e.pool,
+    const row = {
+      id: `r${Date.now()}`, date: e.date, pool: e.pool,
       contador_recirculacion: e.contadorRecirculacion, contador_depuracion: e.contadorDepuracion,
-      horas_filtraje: e.horasFiltraje };
+      horas_filtraje: e.horasFiltraje,
+    };
     await supabase.from('recirculacion').insert(row);
     setRecirculacion(prev => [...prev, rowToRecirculacion(row)]);
   };
 
   const addLegionellaTemp = async (e: Omit<LegionellaTemp, 'id'>) => {
-    const row = { id: `lt${Date.now()}`, date: e.date, month: e.month,
+    const row = {
+      id: `lt${Date.now()}`, date: e.date, month: e.month,
       temp_retorno: e.tempRetorno, temp_deposito1: e.tempDeposito1,
-      temp_deposito2: e.tempDeposito2, temp_ramal1: e.tempRamal1, temp_ramal2: e.tempRamal2 };
+      temp_deposito2: e.tempDeposito2, temp_ramal1: e.tempRamal1, temp_ramal2: e.tempRamal2,
+    };
     await supabase.from('legionella_temps').insert(row);
     setLegionellaTemps(prev => [...prev, rowToLegionellaTemp(row)]);
   };
 
   const addLegionellaBiocida = async (e: Omit<LegionellaBiocida, 'id'>) => {
-    const row = { id: `lb${Date.now()}`, date: e.date, biocida: e.biocida, ph: e.ph,
-      punto_de_medida: e.puntoDeMedida, nombre: e.nombre };
+    const row = {
+      id: `lb${Date.now()}`, date: e.date, biocida: e.biocida, ph: e.ph,
+      punto_de_medida: e.puntoDeMedida, nombre: e.nombre,
+    };
     await supabase.from('legionella_biocida').insert(row);
     setLegionellaBiocida(prev => [...prev, rowToLegionellaBiocida(row)]);
   };
 
   const addIncendio = async (e: Omit<IncendioCheck, 'id'>) => {
-    const row = { id: `i${Date.now()}`, date: e.date, tipo: e.tipo, zona: e.zona,
-      resultado: e.resultado, observaciones: e.observaciones, responsable: e.responsable };
+    const row = {
+      id: `i${Date.now()}`, date: e.date, tipo: e.tipo, zona: e.zona,
+      resultado: e.resultado, observaciones: e.observaciones, responsable: e.responsable,
+    };
     await supabase.from('incendios').insert(row);
     setIncendios(prev => [...prev, rowToIncendio(row)]);
   };
@@ -297,7 +326,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ─── Alerts ──────────────────────────────────────────────────────────────────
   const resolveAlert = async (id: string, newValue: string, resolvedBy: string) => {
     const resolvedAt = new Date().toISOString().split('T')[0];
-    await supabase.from('alerts').update({ resolved: true, resolved_at: resolvedAt, resolved_value: newValue, resolved_by: resolvedBy }).eq('id', id);
+    await supabase.from('alerts').update({
+      resolved: true, resolved_at: resolvedAt, resolved_value: newValue, resolved_by: resolvedBy,
+    }).eq('id', id);
     setAlerts(prev => {
       const alert = prev.find(a => a.id === id);
       if (alert) {
@@ -314,28 +345,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     for (const pool of activePools) {
       const cl = rec.params.cloroLibre[pool];
       if (cl !== null && cl !== undefined && (cl < THRESHOLDS.cloroLibre.min || cl > THRESHOLDS.cloroLibre.max)) {
-        newAlerts.push({ id: `a${idx++}`, type: cl < 0.3 ? 'danger' : 'warning', section: 'piscinas', pool,
+        newAlerts.push({
+          id: `a${idx++}`, type: cl < 0.3 ? 'danger' : 'warning', section: 'piscinas', pool,
           message: `Cloro libre fuera de rango en ${pool}`, value: String(cl),
-          threshold: `${THRESHOLDS.cloroLibre.min}-${THRESHOLDS.cloroLibre.max} mg/L`, timestamp: rec.date, resolved: false });
+          threshold: `${THRESHOLDS.cloroLibre.min}-${THRESHOLDS.cloroLibre.max} mg/L`,
+          timestamp: rec.date, resolved: false,
+        });
       }
       const cc = rec.params.cloroCombinado[pool];
       if (cc !== null && cc !== undefined && cc > THRESHOLDS.cloroCombinado.max) {
-        newAlerts.push({ id: `a${idx++}`, type: cc > 1.0 ? 'danger' : 'warning', section: 'piscinas', pool,
+        newAlerts.push({
+          id: `a${idx++}`, type: cc > 1.0 ? 'danger' : 'warning', section: 'piscinas', pool,
           message: `Cloro combinado alto en ${pool}`, value: String(cc),
-          threshold: `≤${THRESHOLDS.cloroCombinado.max} mg/L`, timestamp: rec.date, resolved: false });
+          threshold: `<=/${THRESHOLDS.cloroCombinado.max} mg/L`,
+          timestamp: rec.date, resolved: false,
+        });
       }
       const ph = rec.params.ph[pool];
       if (ph !== null && ph !== undefined && (ph < THRESHOLDS.ph.min || ph > THRESHOLDS.ph.max)) {
-        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', pool,
+        newAlerts.push({
+          id: `a${idx++}`, type: 'warning', section: 'piscinas', pool,
           message: `pH fuera de rango en ${pool}`, value: String(ph),
-          threshold: `${THRESHOLDS.ph.min}-${THRESHOLDS.ph.max}`, timestamp: rec.date, resolved: false });
+          threshold: `${THRESHOLDS.ph.min}-${THRESHOLDS.ph.max}`,
+          timestamp: rec.date, resolved: false,
+        });
       }
     }
     const { co2Interior, co2Exterior } = rec.params;
-    if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
-      newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas',
-        message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)),
-        threshold: `≤${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false });
+    if (
+      co2Interior !== null && co2Exterior !== null &&
+      co2Interior !== undefined && co2Exterior !== undefined &&
+      (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max
+    ) {
+      newAlerts.push({
+        id: `a${idx++}`, type: 'warning', section: 'piscinas',
+        message: 'CO2 interior elevado (diferencia exterior)',
+        value: String(Math.round(co2Interior - co2Exterior)),
+        threshold: `<=${THRESHOLDS.co2Delta.max} ppm`,
+        timestamp: rec.date, resolved: false,
+      });
     }
     if (newAlerts.length > 0) {
       await supabase.from('alerts').insert(newAlerts);
@@ -343,7 +391,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const generateAlertsFromData = async () => {}; // kept for interface compatibility
+  const generateAlertsFromData = async () => {};
 
   // ─── Active pools ─────────────────────────────────────────────────────────
   const toggleSeasonalPool = async (pool: PoolName) => {
@@ -352,7 +400,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ? activePools.filter(p => p !== pool)
       : [...activePools, pool];
     setActivePools(next);
-    await supabase.from('app_config').upsert({ key: 'active_pools', value: next, updated_at: new Date().toISOString() });
+    await supabase.from('app_config').upsert({
+      key: 'active_pools', value: next, updated_at: new Date().toISOString(),
+    });
   };
 
   return (
