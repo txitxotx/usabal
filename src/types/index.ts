@@ -17,6 +17,13 @@ export interface Alert {
   message: string; value?: number | string; threshold?: number | string;
   timestamp: string; resolved: boolean; resolvedAt?: string;
   resolvedValue?: number | string; resolvedBy?: string;
+  paramDate?: string; paramSession?: string; parameterKey?: string;
+}
+
+export interface AlertRepair {
+  id: string; alertId: string; parametroDate: string; parametroSession: string;
+  pool?: string; parameterKey: string; oldValue?: number; newValue: number;
+  repairedBy: string; repairedAt: string; notes?: string;
 }
 
 export interface ContadorEntry {
@@ -24,7 +31,6 @@ export interface ContadorEntry {
   aguaGeneral: number; aguaGeneralDiario: number; gas: number; gasDiario: number;
   aguaPiscinas: number; aguaPiscinasDiario: number; kwTolargi: number; urBeroa: number;
   electricidadNormal?: number; electricidadPreferente?: number;
-  gasCogeneracion?: number; kwProducidos?: number; enfriadora?: number;
 }
 
 export type PoolName = 'P. Grande' | 'P. Peq.-Med.' | 'SPA' | 'Pileta' | 'P. Ext. Grande' | 'P. Ext. Pequeña' | 'Splash';
@@ -36,27 +42,28 @@ export type MeasurementSession = 'morning' | 'afternoon';
 export interface PoolParamRecord {
   id: string; date: string; session: MeasurementSession;
   params: {
-    cloroLibre:          Record<PoolName, number | null>;
-    cloroCombinado:      Record<PoolName, number | null>;
-    ph:                  Record<PoolName, number | null>;
-    temperatura:         Record<PoolName, number | null>;
-    turbidez:            Record<PoolName, number | null>;
-    tempAmbiente:        number | null;
-    humedadRelativa:     number | null;
-    co2Interior:         number | null;
-    co2Exterior:         number | null;
-    // Dos zonas de medición ambiental
-    tempAmbienteGrande:  number | null;
-    tempAmbienteSpa:     number | null;
-    humedadGrande:       number | null;
-    humedadSpa:          number | null;
+    cloroLibre:           Record<PoolName, number | null>;
+    cloroCombinado:       Record<PoolName, number | null>;
+    ph:                   Record<PoolName, number | null>;
+    temperatura:          Record<PoolName, number | null>;
+    turbidez:             Record<PoolName, number | null>;
+    tempAmbiente:         number | null;
+    humedadRelativa:      number | null;
+    co2Interior:          number | null;
+    co2Exterior:          number | null;
+    tempAmbienteGrande:   number | null;
+    tempAmbienteSpa:      number | null;
+    tempAmbientePequena:  number | null;
+    humedadGrande:        number | null;
+    humedadSpa:           number | null;
+    humedadPequena:       number | null;
   };
 }
 
 export interface RecirculacionEntry {
   id: string; date: string; pool: PoolName;
   contadorRecirculacion: number;
-  contadorDepuracion: number;   // = agua renovada en BD
+  contadorDepuracion: number;
   horasFiltraje: number;
 }
 
