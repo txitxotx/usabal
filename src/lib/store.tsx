@@ -367,24 +367,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     for (const pool of activePools) {
       const cl = rec.params.cloroLibre[pool];
       if (cl !== null && cl !== undefined && (cl < THRESHOLDS.cloroLibre.min || cl > THRESHOLDS.cloroLibre.max)) {
-        newAlerts.push({ id: `a${idx++}`, type: cl < 0.3 ? 'danger' : 'warning', section: 'piscinas', pool, message: `Cloro libre fuera de rango en ${pool}`, value: String(cl), threshold: `${THRESHOLDS.cloroLibre.min}-${THRESHOLDS.cloroLibre.max} mg/L`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'cloroLibre' });
+        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Cloro libre fuera de rango en ${pool}`, value: String(cl), threshold: `${THRESHOLDS.cloroLibre.min}-${THRESHOLDS.cloroLibre.max} mg/L`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'cloroLibre' });
       }
       const cc = rec.params.cloroCombinado[pool];
       if (cc !== null && cc !== undefined && cc > THRESHOLDS.cloroCombinado.max) {
-        newAlerts.push({ id: `a${idx++}`, type: cc > 1.0 ? 'danger' : 'warning', section: 'piscinas', pool, message: `Cloro combinado alto en ${pool}`, value: String(cc), threshold: `<=${THRESHOLDS.cloroCombinado.max} mg/L`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'cloroCombinado' });
+        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Cloro combinado alto en ${pool}`, value: String(cc), threshold: `<=${THRESHOLDS.cloroCombinado.max} mg/L`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'cloroCombinado' });
       }
       const ph = rec.params.ph[pool];
       if (ph !== null && ph !== undefined && (ph < THRESHOLDS.ph.min || ph > THRESHOLDS.ph.max)) {
-        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', pool, message: `pH fuera de rango en ${pool}`, value: String(ph), threshold: `${THRESHOLDS.ph.min}-${THRESHOLDS.ph.max}`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'ph' });
+        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `pH fuera de rango en ${pool}`, value: String(ph), threshold: `${THRESHOLDS.ph.min}-${THRESHOLDS.ph.max}`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'ph' });
       }
       const turb = rec.params.turbidez[pool];
       if (turb !== null && turb !== undefined && turb > THRESHOLDS.turbidez.max) {
-        newAlerts.push({ id: `a${idx++}`, type: turb > 10 ? 'danger' : 'warning', section: 'piscinas', pool, message: `Turbidez elevada en ${pool}`, value: String(turb), threshold: `<=${THRESHOLDS.turbidez.max} NTU`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'turbidez' });
+        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Turbidez elevada en ${pool}`, value: String(turb), threshold: `<=${THRESHOLDS.turbidez.max} NTU`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'turbidez' });
       }
     }
+      const temp = rec.params.temperatura[pool];
+      if (temp !== null && temp !== undefined) {
+        const tr = TEMP_AGUA_THRESHOLDS[pool] ?? { min: 0, max: 40 };
+        if (temp < tr.min || temp > tr.max) {
+          newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Temperatura del agua fuera de rango en ${pool}`, value: String(temp), threshold: `${tr.min}-${tr.max}°C`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'temperatura' });
+        }
+      }
     const { co2Interior, co2Exterior } = rec.params;
     if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
-      newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)), threshold: `<=${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'co2Delta' });
+      newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)), threshold: `<=${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'co2Delta' });
     }
     if (newAlerts.length > 0) {
       await supabase.from('alerts').insert(newAlerts);
