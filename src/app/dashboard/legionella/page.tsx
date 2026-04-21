@@ -107,7 +107,7 @@ export default function LegionellaPage() {
           <div className="metric-sub">mín 0.2 mg/L</div>
         </div>
         <div className="metric-card" style={{ borderTop: `3px solid ${lastBio?.ph && lastBio.ph >= 7.0 && lastBio.ph <= 8.0 ? '#22c55e' : '#f59e0b'}` }}>
-          <div className="metric-label">pH ACS</div>
+          <div className="metric-label">pH Entrada agua</div>
           <div className="metric-value" style={{ fontSize: '22px' }}>{lastBio?.ph?.toFixed(2) ?? '—'}</div>
           <div className="metric-sub">rango 7.0–8.0</div>
         </div>
