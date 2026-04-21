@@ -78,7 +78,6 @@ export default function AlertasPage() {
     }
   };
 
-  const isPiscina = resolveModal?.section === 'piscinas' || (resolveModal && alerts.find(a => a.id === resolveModal.id)?.section === 'piscinas');
   const hasRepairData = resolveModal?.paramDate && resolveModal?.paramSession && resolveModal?.parameterKey && resolveModal?.pool;
 
   return (
