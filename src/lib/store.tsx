@@ -377,6 +377,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (ph !== null && ph !== undefined && (ph < THRESHOLDS.ph.min || ph > THRESHOLDS.ph.max)) {
         newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', pool, message: `pH fuera de rango en ${pool}`, value: String(ph), threshold: `${THRESHOLDS.ph.min}-${THRESHOLDS.ph.max}`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'ph' });
       }
+      const turb = rec.params.turbidez[pool];
+      if (turb !== null && turb !== undefined && turb > THRESHOLDS.turbidez.max) {
+        newAlerts.push({ id: `a${idx++}`, type: turb > 10 ? 'danger' : 'warning', section: 'piscinas', pool, message: `Turbidez elevada en ${pool}`, value: String(turb), threshold: `<=${THRESHOLDS.turbidez.max} NTU`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'turbidez' });
+      }
     }
     const { co2Interior, co2Exterior } = rec.params;
     if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
