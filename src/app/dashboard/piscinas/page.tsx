@@ -42,64 +42,59 @@ function valueClassPool(v: number | null | undefined, key: string, pool: string)
 }
 
 // ─── PDF Export ────────────────────────────────────────────────────────────────
+// Zona de ambiente según piscina seleccionada
+function getAmbZone(pool: string): 'grande' | 'pequena' | 'spa' | null {
+  if (pool === 'todas' || pool === 'P. Grande') return 'grande';
+  if (pool === 'P. Peq.-Med.') return 'pequena';
+  if (pool === 'SPA') return 'spa';
+  return 'grande'; // default para exteriores/pileta
+}
+
 function exportPDF(parametros: any[], pool: PoolName | 'todas', activePools: PoolName[]) {
   const today = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
   const poolsToShow = pool === 'todas' ? activePools : [pool];
   const period = parametros.length > 0 ? `${parametros[0].date} — ${parametros[parametros.length - 1].date}` : '—';
+  const zone = pool === 'todas' ? null : getAmbZone(pool);
+  const zoneLabel = zone === 'pequena' ? 'P. Pequeña' : zone === 'spa' ? 'SPA' : 'P. Grande';
 
-  const waterRows = [...parametros].reverse().flatMap(rec =>
+  const clr = (v: number | null | undefined, min: number, max: number) =>
+    v == null ? '#888' : (v < min || v > max) ? '#dc2626' : '#15803d';
+
+  // Single combined table: water params + ambient zone + co2
+  const tableRows = [...parametros].reverse().flatMap(rec =>
     poolsToShow.map(p => {
       const tr = getTempRange(p);
-      const clr = (v: number | null, min: number, max: number) => v === null ? '#888' : (v < min || v > max) ? '#dc2626' : '#15803d';
+      // Pick the right ambient zone
+      let ta: number | null = null, hr: number | null = null;
+      const z = pool === 'todas' ? getAmbZone(p) : zone;
+      if (z === 'grande')  { ta = rec.params.tempAmbienteGrande ?? rec.params.tempAmbiente; hr = rec.params.humedadGrande ?? rec.params.humedadRelativa; }
+      if (z === 'pequena') { ta = rec.params.tempAmbientePequena; hr = rec.params.humedadPequena; }
+      if (z === 'spa')     { ta = rec.params.tempAmbienteSpa;     hr = rec.params.humedadSpa; }
+      const delta = rec.params.co2Interior != null && rec.params.co2Exterior != null
+        ? Math.round(rec.params.co2Interior - rec.params.co2Exterior) : null;
       return `<tr>
         <td>${rec.date}</td>
-        <td>${rec.session === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</td>
-        <td style="font-weight:600;color:${POOL_COLORS[p] ?? '#333'}">${p}</td>
-        <td style="color:${clr(rec.params.cloroLibre[p], 0.5, 2.0)};font-weight:600">${rec.params.cloroLibre[p]?.toFixed(2) ?? '—'}</td>
-        <td style="color:${clr(rec.params.cloroCombinado[p], 0, 0.6)};font-weight:600">${rec.params.cloroCombinado[p]?.toFixed(2) ?? '—'}</td>
-        <td style="color:${clr(rec.params.ph[p], 7.2, 7.8)};font-weight:600">${rec.params.ph[p]?.toFixed(2) ?? '—'}</td>
-        <td style="color:${clr(rec.params.temperatura[p], tr.min, tr.max)};font-weight:600">${rec.params.temperatura[p]?.toFixed(1) ?? '—'}</td>
-        <td style="color:${clr(rec.params.turbidez[p], 0, 5)};font-weight:600">${rec.params.turbidez[p]?.toFixed(2) ?? '—'}</td>
+        <td>${rec.session === 'morning' ? '☀ M' : '🌆 T'}</td>
+        <td style="font-weight:600;color:${POOL_COLORS[p]??'#333'}">${p}</td>
+        <td style="color:${clr(rec.params.cloroLibre[p],0.5,2.0)};font-weight:600">${rec.params.cloroLibre[p]?.toFixed(2)??'—'}</td>
+        <td style="color:${clr(rec.params.cloroCombinado[p],0,0.6)};font-weight:600">${rec.params.cloroCombinado[p]?.toFixed(2)??'—'}</td>
+        <td style="color:${clr(rec.params.ph[p],7.2,7.8)};font-weight:600">${rec.params.ph[p]?.toFixed(2)??'—'}</td>
+        <td style="color:${clr(rec.params.temperatura[p],tr.min,tr.max)};font-weight:600">${rec.params.temperatura[p]?.toFixed(1)??'—'}</td>
+        <td style="color:${clr(rec.params.turbidez[p],0,5)};font-weight:600">${rec.params.turbidez[p]?.toFixed(2)??'—'}</td>
+        <td style="color:${clr(ta,26,33)};font-weight:600">${ta?.toFixed(1)??'—'}</td>
+        <td style="color:${clr(hr,50,70)};font-weight:600">${hr?.toFixed(1)??'—'}</td>
+        <td>${rec.params.co2Interior?.toFixed(0)??'—'}</td>
+        <td>${rec.params.co2Exterior?.toFixed(0)??'—'}</td>
+        <td style="color:${delta!=null?(delta>500?'#dc2626':'#15803d'):'#888'};font-weight:600">${delta??'—'}</td>
       </tr>`;
     })
   ).join('');
 
-  const ambRows = [...parametros].reverse().map(rec => {
-    const delta = rec.params.co2Interior != null && rec.params.co2Exterior != null
-      ? Math.round(rec.params.co2Interior - rec.params.co2Exterior) : null;
-    const dc = delta !== null ? (delta > 500 ? '#dc2626' : '#15803d') : '#888';
-    const tg = rec.params.tempAmbienteGrande ?? rec.params.tempAmbiente;
-    const hg = rec.params.humedadGrande ?? rec.params.humedadRelativa;
-    const tgc = tg !== null && tg !== undefined ? (tg < 26 || tg > 33 ? '#dc2626' : '#15803d') : '#888';
-    const hgc = hg !== null && hg !== undefined ? (hg < 50 || hg > 70 ? '#dc2626' : '#15803d') : '#888';
-    const ts = rec.params.tempAmbienteSpa;
-    const hs = rec.params.humedadSpa;
-    const tsc = ts !== null && ts !== undefined ? (ts < 26 || ts > 33 ? '#dc2626' : '#15803d') : '#888';
-    const hsc = hs !== null && hs !== undefined ? (hs < 50 || hs > 70 ? '#dc2626' : '#15803d') : '#888';
-    return `<tr>
-      <td>${rec.date}</td>
-      <td>${rec.session === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</td>
-      <td style="color:${tgc};font-weight:600">${tg?.toFixed(1) ?? '—'}</td>
-      <td style="color:${hgc};font-weight:600">${hg?.toFixed(1) ?? '—'}</td>
-      <td style="color:${tsc};font-weight:600">${ts?.toFixed(1) ?? '—'}</td>
-      <td style="color:${hsc};font-weight:600">${hs?.toFixed(1) ?? '—'}</td>
-      <td>${rec.params.co2Interior?.toFixed(0) ?? '—'}</td>
-      <td>${rec.params.co2Exterior?.toFixed(0) ?? '—'}</td>
-      <td style="color:${dc};font-weight:600">${delta ?? '—'}</td>
-    </tr>`;
-  }).join('');
-
   const thresholdCards = poolsToShow.map(p => {
     const tr = getTempRange(p);
-    return `<div class="threshold-card" style="border-left-color:${POOL_COLORS[p] ?? '#94a3b8'}">
+    return `<div class="threshold-card" style="border-left-color:${POOL_COLORS[p]??'#94a3b8'}">
       <div class="tc-pool">${p}</div>
-      <div class="tc-params">
-        Cloro libre: <b>0.5 – 2.0 mg/L</b><br>
-        Cloro comb.: <b>≤ 0.6 mg/L</b><br>
-        pH: <b>7.2 – 7.8</b><br>
-        Temperatura: <b>${tr.min} – ${tr.max} °C</b><br>
-        Turbidez: <b>≤ 5.0 NTU</b>
-      </div>
+      <div class="tc-params">Cl. libre: <b>0.5–2.0 mg/L</b><br>Cl. comb.: <b>≤0.6 mg/L</b><br>pH: <b>7.2–7.8</b><br>Temperatura: <b>${tr.min}–${tr.max}°C</b><br>Turbidez: <b>≤5.0 NTU</b></div>
     </div>`;
   }).join('');
 
@@ -126,23 +121,22 @@ body{font-family:'Source Sans 3',sans-serif;font-size:10pt;color:#1a1a2e;-webkit
 .cover-footer-text{font-size:8pt;color:#94a3b8}
 .cover-legal{font-size:7.5pt;color:#94a3b8;max-width:400px;text-align:right;line-height:1.5}
 @page{margin:18mm 16mm;size:A4 landscape}
-.section-header{margin:24px 0 16px;padding-bottom:12px;border-bottom:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-end}
-.section-title{font-family:'Source Serif 4',serif;font-size:15pt;font-weight:700;color:#0f1f3d}
+.section-header{margin:16px 0 12px;padding-bottom:10px;border-bottom:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-end}
+.section-title{font-family:'Source Serif 4',serif;font-size:13pt;font-weight:700;color:#0f1f3d}
 .section-period{font-size:8.5pt;color:#64748b}
-.threshold-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;page-break-inside:avoid}
+.threshold-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;page-break-inside:avoid}
 .threshold-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;border-left:3px solid}
 .tc-pool{font-size:8pt;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .tc-params{font-size:9pt;line-height:1.8;color:#334155}
-table{width:100%;border-collapse:collapse;font-size:8.5pt;page-break-inside:auto}
+table{width:100%;border-collapse:collapse;font-size:8pt;page-break-inside:auto}
 thead{display:table-header-group}tr{page-break-inside:avoid}
-th{background:#0f1f3d;color:#fff;padding:8px 10px;text-align:left;font-size:7.5pt;font-weight:600;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
-td{padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+th{background:#0f1f3d;color:#fff;padding:7px 8px;text-align:left;font-size:7pt;font-weight:600;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 tr:nth-child(even) td{background:#fafbfc}
-.legend{display:flex;gap:20px;align-items:center;margin-bottom:16px;padding:10px 16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+.legend{display:flex;gap:16px;align-items:center;margin-bottom:14px;padding:8px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
 .legend-item{display:flex;align-items:center;gap:6px;font-size:8pt;color:#475569}
 .legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
 .page-footer{position:fixed;bottom:0;left:16mm;right:16mm;height:14mm;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;font-size:7pt;color:#94a3b8}
-.sig-area{margin-top:40px;page-break-inside:avoid}
 </style></head><body>
 <div class="cover">
   <div class="cover-logo-area"><div class="cover-logo">Aqua<span>Dash</span></div><div class="cover-badge">Documento oficial</div></div>
@@ -150,22 +144,22 @@ tr:nth-child(even) td{background:#fafbfc}
     <div class="cover-eyebrow">Registro de control de calidad</div>
     <div class="cover-title">Calidad del Agua<br>en Instalaciones<br>Acuáticas</div>
     <div class="cover-divider"></div>
-    <div class="cover-subtitle">Registro oficial de parámetros fisicoquímicos conforme al Real Decreto 742/2013 y normativa de la Comunidad Autónoma del País Vasco.</div>
+    <div class="cover-subtitle">Registro oficial de parámetros fisicoquímicos conforme al Real Decreto 742/2013 y normativa del País Vasco.</div>
   </div>
   <div class="cover-meta-grid">
     <div class="cover-meta-item"><label>Instalación</label><p>${pool === 'todas' ? 'Todas las piscinas' : pool}</p></div>
-    <div class="cover-meta-item"><label>Período de registro</label><p>${period}</p></div>
+    <div class="cover-meta-item"><label>Período</label><p>${period}</p></div>
     <div class="cover-meta-item"><label>Fecha de emisión</label><p>${today}</p></div>
   </div>
   <div class="cover-footer">
-    <div class="cover-footer-text">Generado por <strong>AquaDash</strong> · Sistema de gestión de instalaciones acuáticas</div>
-    <div class="cover-legal">Documento generado electrónicamente. Los datos corresponden a mediciones realizadas por personal cualificado.</div>
+    <div class="cover-footer-text">Generado por <strong>AquaDash</strong></div>
+    <div class="cover-legal">Documento emitido electrónicamente. Datos registrados por personal cualificado.</div>
   </div>
 </div>
 
-<div class="page-footer"><span><strong>AquaDash</strong> — Registro de Calidad del Agua · ${pool === 'todas' ? 'Todas las piscinas' : pool}</span><span>Período: ${period} &nbsp;·&nbsp; Emitido: ${today}</span></div>
+<div class="page-footer"><span><strong>AquaDash</strong> — ${pool === 'todas' ? 'Todas las piscinas' : pool}</span><span>Período: ${period} · Emitido: ${today}</span></div>
 
-<div class="section-header"><div class="section-title">Umbrales de referencia</div><div class="section-period">Valores conforme a RD 742/2013</div></div>
+<div class="section-header"><div class="section-title">Umbrales de referencia</div><div class="section-period">RD 742/2013</div></div>
 <div class="threshold-grid">${thresholdCards}</div>
 
 <div class="legend">
@@ -173,45 +167,36 @@ tr:nth-child(even) td{background:#fafbfc}
   <div class="legend-item"><div class="legend-dot" style="background:#15803d"></div>Conforme</div>
   <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>Fuera de rango</div>
   <div class="legend-item"><div class="legend-dot" style="background:#888"></div>Sin dato</div>
+  ${pool !== 'todas' ? `<span style="font-size:8pt;color:#475569;margin-left:8px">Datos ambientales: zona <strong>${zoneLabel}</strong></span>` : ''}
 </div>
 
-<div class="section-header"><div class="section-title">Parámetros del agua</div><div class="section-period">Período: ${period}</div></div>
+<div class="section-header"><div class="section-title">Registro de mediciones</div><div class="section-period">Período: ${period}</div></div>
 <table>
   <thead><tr>
-    <th>Fecha</th><th>Sesión</th><th>Piscina</th>
-    <th>Cl. Libre (mg/L)<br><span style="font-weight:400;opacity:.7">0.5–2.0</span></th>
-    <th>Cl. Comb. (mg/L)<br><span style="font-weight:400;opacity:.7">≤0.6</span></th>
-    <th>pH<br><span style="font-weight:400;opacity:.7">7.2–7.8</span></th>
-    <th>Temp. Agua (°C)<br><span style="font-weight:400;opacity:.7">por piscina</span></th>
-    <th>Turbidez (NTU)<br><span style="font-weight:400;opacity:.7">≤5.0</span></th>
+    <th>Fecha</th><th>Ses.</th><th>Piscina</th>
+    <th>Cl.Libre<br><span style="opacity:.7;font-weight:400">0.5–2.0</span></th>
+    <th>Cl.Comb.<br><span style="opacity:.7;font-weight:400">≤0.6</span></th>
+    <th>pH<br><span style="opacity:.7;font-weight:400">7.2–7.8</span></th>
+    <th>Tª Agua<br><span style="opacity:.7;font-weight:400">por zona</span></th>
+    <th>Turbidez<br><span style="opacity:.7;font-weight:400">≤5.0</span></th>
+    <th>Tª Amb. (°C)<br><span style="opacity:.7;font-weight:400">26–33</span></th>
+    <th>Humedad (%)<br><span style="opacity:.7;font-weight:400">50–70</span></th>
+    <th>CO₂ Int.</th>
+    <th>CO₂ Ext.</th>
+    <th>ΔCO₂<br><span style="opacity:.7;font-weight:400">≤500</span></th>
   </tr></thead>
-  <tbody>${waterRows}</tbody>
+  <tbody>${tableRows}</tbody>
 </table>
 
-<div class="section-header" style="margin-top:32px"><div class="section-title">Parámetros ambientales</div><div class="section-period">Período: ${period}</div></div>
-<table>
-  <thead><tr>
-    <th>Fecha</th><th>Sesión</th>
-    <th>Tª Amb. P.Grande (°C)<br><span style="font-weight:400;opacity:.7">26–33</span></th>
-    <th>Humedad P.Grande (%)<br><span style="font-weight:400;opacity:.7">50–70</span></th>
-    <th>Tª Amb. SPA (°C)<br><span style="font-weight:400;opacity:.7">26–33</span></th>
-    <th>Humedad SPA (%)<br><span style="font-weight:400;opacity:.7">50–70</span></th>
-    <th>CO₂ Interior (ppm)</th>
-    <th>CO₂ Exterior (ppm)</th>
-    <th>ΔCO₂<br><span style="font-weight:400;opacity:.7">≤500</span></th>
-  </tr></thead>
-  <tbody>${ambRows}</tbody>
-</table>
-
-<div class="sig-area">
+<div style="margin-top:40px;page-break-inside:avoid">
   <div class="section-header"><div class="section-title">Validación y firma</div></div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;margin-top:20px">
-    ${['Responsable Técnico','Supervisor de Instalación','Visado Administración'].map(r => `
+    ${['Responsable Técnico','Supervisor de Instalación','Visado Administración'].map(r=>`
     <div><p style="font-size:8pt;color:#64748b;margin-bottom:40px">${r}</p>
     <div style="border-top:1px solid #334155;padding-top:8px"><p style="font-size:8pt;color:#94a3b8">Nombre y firma</p></div></div>`).join('')}
   </div>
   <div style="margin-top:24px;padding:12px 16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
-    <p style="font-size:7.5pt;color:#64748b;line-height:1.6"><strong>Nota legal:</strong> El presente documento constituye el registro oficial de control de calidad del agua exigido por el Real Decreto 742/2013. Documento emitido mediante sistema informatizado de gestión.</p>
+    <p style="font-size:7.5pt;color:#64748b;line-height:1.6"><strong>Nota legal:</strong> Registro oficial conforme al Real Decreto 742/2013. Emitido mediante sistema informatizado de gestión AquaDash.</p>
   </div>
 </div>
 </body></html>`;
@@ -221,7 +206,6 @@ tr:nth-child(even) td{background:#fafbfc}
   const win = window.open(url, '_blank');
   if (win) win.onload = () => { setTimeout(() => { win.print(); URL.revokeObjectURL(url); }, 800); };
 }
-
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function PiscinasPage() {
   const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser } = useApp();
@@ -241,6 +225,8 @@ export default function PiscinasPage() {
   const hGrandeRef = useRef<HTMLInputElement>(null);
   const taSpaRef = useRef<HTMLInputElement>(null);
   const hSpaRef = useRef<HTMLInputElement>(null);
+  const taPequenaRef = useRef<HTMLInputElement>(null);
+  const hPequenaRef = useRef<HTMLInputElement>(null);
   const co2IntRef = useRef<HTMLInputElement>(null);
   const co2ExtRef = useRef<HTMLInputElement>(null);
   // Per-pool param refs: { pool: { param: ref } }
@@ -324,8 +310,10 @@ export default function PiscinasPage() {
           co2Interior:         num(co2IntRef),
           co2Exterior:         num(co2ExtRef),
           tempAmbienteGrande:  num(taGrandeRef),
+          tempAmbientePequena: num(taPequenaRef),
           tempAmbienteSpa:     num(taSpaRef),
           humedadGrande:       num(hGrandeRef),
+          humedadPequena:      num(hPequenaRef),
           humedadSpa:          num(hSpaRef),
         } as any,
       });
@@ -479,6 +467,7 @@ export default function PiscinasPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '28px' }}>
               {[
                 { zone: '🏊 Zona P. Grande', ta: lastAmb?.params.tempAmbienteGrande ?? lastAmb?.params.tempAmbiente ?? null, hr: lastAmb?.params.humedadGrande ?? lastAmb?.params.humedadRelativa ?? null, color: '#0077cc' },
+                { zone: '🏊 Zona P. Pequeña', ta: lastAmb?.params.tempAmbientePequena ?? null, hr: lastAmb?.params.humedadPequena ?? null, color: '#0f6e56' },
                 { zone: '🧖 Zona SPA', ta: lastAmb?.params.tempAmbienteSpa ?? null, hr: lastAmb?.params.humedadSpa ?? null, color: '#7c3aed' },
               ].map(({ zone, ta, hr, color }) => (
                 <div key={zone} className="card" style={{ padding: '18px', borderTop: `3px solid ${color}` }}>
@@ -509,8 +498,9 @@ export default function PiscinasPage() {
                 <table className="data-table">
                   <thead><tr>
                     <th>Fecha</th><th>Sesión</th>
-                    <th>Tª Grande (°C)</th><th>Humedad Grande (%)</th>
-                    <th>Tª SPA (°C)</th><th>Humedad SPA (%)</th>
+                    <th>Tª Grande (°C)</th><th>Hum. Grande (%)</th>
+                    <th>Tª Pequeña (°C)</th><th>Hum. Pequeña (%)</th>
+                    <th>Tª SPA (°C)</th><th>Hum. SPA (%)</th>
                     <th>CO₂ Int.</th><th>CO₂ Ext.</th><th>ΔCO₂</th>
                   </tr></thead>
                   <tbody>
@@ -523,6 +513,8 @@ export default function PiscinasPage() {
                           <td>{rec.session === 'morning' ? '☀' : '🌆'}</td>
                           <td className={valueClass(rec.params.tempAmbienteGrande ?? rec.params.tempAmbiente, 26, 33)} style={{ fontFamily: 'var(--font-mono)' }}>{(rec.params.tempAmbienteGrande ?? rec.params.tempAmbiente)?.toFixed(1) ?? '—'}</td>
                           <td className={valueClass(rec.params.humedadGrande ?? rec.params.humedadRelativa, 50, 70)} style={{ fontFamily: 'var(--font-mono)' }}>{(rec.params.humedadGrande ?? rec.params.humedadRelativa)?.toFixed(1) ?? '—'}</td>
+                          <td className={valueClass(rec.params.tempAmbientePequena, 26, 33)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.tempAmbientePequena?.toFixed(1) ?? '—'}</td>
+                          <td className={valueClass(rec.params.humedadPequena, 50, 70)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.humedadPequena?.toFixed(1) ?? '—'}</td>
                           <td className={valueClass(rec.params.tempAmbienteSpa, 26, 33)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.tempAmbienteSpa?.toFixed(1) ?? '—'}</td>
                           <td className={valueClass(rec.params.humedadSpa, 50, 70)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.humedadSpa?.toFixed(1) ?? '—'}</td>
                           <td style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.co2Interior?.toFixed(0) ?? '—'}</td>
@@ -679,6 +671,15 @@ export default function PiscinasPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>Temp. ambiente (°C)</label><input ref={taSpaRef} className="input-field" type="number" step="0.1" placeholder="26–33" style={{ fontSize: '13px' }} /></div>
                 <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>Humedad relativa (%)</label><input ref={hSpaRef} className="input-field" type="number" step="0.1" placeholder="50–70" style={{ fontSize: '13px' }} /></div>
+              </div>
+            </div>
+
+            {/* Ambiente zona Pequeña */}
+            <div style={{ marginBottom: '14px', padding: '14px', background: '#e6fff8', borderRadius: '8px', borderLeft: '3px solid #0f6e56' }}>
+              <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '600', color: '#0f1f3d' }}>🏊 Zona P. Pequeña — Ambiente</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>Temp. ambiente (°C)</label><input ref={taPequenaRef} className="input-field" type="number" step="0.1" placeholder="26–33" style={{ fontSize: '13px' }} /></div>
+                <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>Humedad relativa (%)</label><input ref={hPequenaRef} className="input-field" type="number" step="0.1" placeholder="50–70" style={{ fontSize: '13px' }} /></div>
               </div>
             </div>
 
