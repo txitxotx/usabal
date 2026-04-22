@@ -37,6 +37,225 @@ interface PurgaSemanal { id: string; year: number; month: number; week: number; 
 interface TurbidezSemanal { id: string; year: number; month: number; week: number; turbidez: number | null; punto_medida: string | null; nombre: string | null; }
 interface AperturaTerminal { id: string; year: number; month: number; planta: string | null; ramal: string | null; punto_terminal: string | null; ubicacion: string | null; semana_1: string | null; semana_2: string | null; semana_3: string | null; semana_4: string | null; semana_5: string | null; }
 
+
+// ─── PDF Export Legionella ────────────────────────────────────────────────────
+function exportLegionellaPDF(
+  month: number,
+  tempsMonth: any[],
+  biocidaMonth: any[],
+  purgaSemMonth: any[],
+  turbidezMonth: any[],
+  aperturaMonth: any[],
+) {
+  const today = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+  const monthName = MONTHS[month - 1];
+
+  const clr = (v: number | null, min: number, max: number) =>
+    v == null ? '#888' : (v < min || v > max) ? '#dc2626' : '#15803d';
+
+  const tempRows = [...tempsMonth].reverse().map(t => `
+    <tr>
+      <td>${t.date}</td>
+      <td style="color:${clr(t.tempRetorno,50,65)};font-weight:600">${t.tempRetorno?.toFixed(1)??'—'}°C</td>
+      <td style="color:${clr(t.tempDeposito1,60,70)};font-weight:600">${t.tempDeposito1?.toFixed(1)??'—'}°C</td>
+      <td style="color:${clr(t.tempDeposito2,60,70)};font-weight:600">${t.tempDeposito2?.toFixed(1)??'—'}°C</td>
+      <td>${t.tempRamal1?.toFixed(1)??'—'}°C</td>
+      <td>${t.tempRamal2?.toFixed(1)??'—'}°C</td>
+    </tr>`).join('');
+
+  const bioRows = [...biocidaMonth].reverse().map(b => {
+    const ok = (b.biocida!=null&&b.biocida>=0.2&&b.biocida<=2.0)&&(b.ph!=null&&b.ph>=7.0&&b.ph<=8.0);
+    return `<tr>
+      <td>${b.date}</td>
+      <td style="color:${clr(b.biocida,0.2,2.0)};font-weight:600">${b.biocida?.toFixed(2)??'—'}</td>
+      <td style="color:${clr(b.ph,7.0,8.0)};font-weight:600">${b.ph?.toFixed(2)??'—'}</td>
+      <td>${b.puntoDeMedida??'—'}</td>
+      <td>${b.nombre??'—'}</td>
+      <td style="color:${ok?'#15803d':'#dc2626'};font-weight:700">${ok?'✓ Conforme':'✗ Revisar'}</td>
+    </tr>`;
+  }).join('');
+
+  const purgaSemRows = [1,2,3,4,5].map(w => {
+    const r = purgaSemMonth.find((p:any) => p.week === w);
+    return `<tr>
+      <td style="font-weight:600">Semana ${w}</td>
+      <td>${r?.fecha_realizacion ? `Día ${r.fecha_realizacion}` : '—'}</td>
+      <td style="text-transform:capitalize">${r?.nombre??'—'}</td>
+      <td style="color:${r?.realizada?'#15803d':'#d97706'};font-weight:700">${r?.realizada?'✓ Realizada':'Pendiente'}</td>
+    </tr>`;
+  }).join('');
+
+  const turbidezRows = [1,2,3,4,5].map(w => {
+    const r = turbidezMonth.find((t:any) => t.week === w);
+    const tv = r?.turbidez;
+    return `<tr>
+      <td style="font-weight:600">Semana ${w}</td>
+      <td style="color:${tv!=null?(tv>1?'#dc2626':'#15803d'):'#888'};font-weight:600">${tv!=null?tv.toFixed(2):'—'} UNF</td>
+      <td style="text-transform:capitalize">${r?.punto_medida??'—'}</td>
+      <td style="text-transform:capitalize">${r?.nombre??'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Apertura: group by planta/ramal
+  const byRamal: Record<string, any[]> = {};
+  for (const a of aperturaMonth) {
+    const key = (a.ramal||'Sin ramal');
+    if (!byRamal[key]) byRamal[key] = [];
+    byRamal[key].push(a);
+  }
+  const aperturaRows = Object.entries(byRamal).map(([ramal, points]) => {
+    const headerRow = `<tr style="background:#f1f5f9"><td colspan="7" style="font-weight:700;color:#0f1f3d;text-transform:capitalize;padding:6px 10px">${ramal}</td></tr>`;
+    const ptRows = points.map(a => {
+      const sv = (v:string|null) => !v||v==='X'?'—':(v.toLowerCase()==='si'?'✓':'✗');
+      const sc = (v:string|null) => !v||v==='X'?'#888':(v.toLowerCase()==='si'?'#15803d':'#dc2626');
+      return `<tr>
+        <td style="font-size:10pt;text-transform:uppercase;font-weight:600">${a.punto_terminal??'—'}</td>
+        <td style="font-size:9pt;color:#64748b">${a.ubicacion??'—'}</td>
+        <td style="text-align:center;color:${sc(a.semana_1)};font-weight:700">${sv(a.semana_1)}</td>
+        <td style="text-align:center;color:${sc(a.semana_2)};font-weight:700">${sv(a.semana_2)}</td>
+        <td style="text-align:center;color:${sc(a.semana_3)};font-weight:700">${sv(a.semana_3)}</td>
+        <td style="text-align:center;color:${sc(a.semana_4)};font-weight:700">${sv(a.semana_4)}</td>
+        <td style="text-align:center;color:${sc(a.semana_5)};font-weight:700">${sv(a.semana_5)}</td>
+      </tr>`;
+    }).join('');
+    return headerRow + ptRows;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Registro Legionella — ${monthName} 2026</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Source+Sans+3:wght@300;400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Source Sans 3',sans-serif;font-size:9.5pt;color:#1a1a2e;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.cover{page-break-after:always;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;padding:60px 72px;position:relative}
+.cover::before{content:'';position:absolute;top:0;left:0;right:0;height:8px;background:linear-gradient(90deg,#0f1f3d,#0f6e56 50%,#22c55e)}
+.cover-logo{font-family:'Source Serif 4',serif;font-size:13pt;font-weight:700;color:#0f1f3d}.cover-logo span{color:#0f6e56}
+.cover-badge{font-size:8pt;font-weight:600;color:#0f6e56;border:1.5px solid #0f6e56;padding:4px 10px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase}
+.cover-logo-area{display:flex;justify-content:space-between;align-items:flex-start}
+.cover-title{font-family:'Source Serif 4',serif;font-size:32pt;font-weight:700;color:#0f1f3d;line-height:1.15;margin-bottom:16px}
+.cover-subtitle{font-size:13pt;font-weight:300;color:#475569;line-height:1.5;max-width:520px}
+.cover-divider{width:60px;height:4px;background:linear-gradient(90deg,#0f6e56,#22c55e);border-radius:2px;margin:28px 0}
+.cover-meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:50px}
+.cover-meta-item label{display:block;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:6px}
+.cover-meta-item p{font-size:10pt;font-weight:600;color:#0f1f3d}
+.cover-footer{border-top:1px solid #e2e8f0;padding-top:18px;display:flex;justify-content:space-between;align-items:center}
+.cover-footer-text{font-size:8pt;color:#94a3b8}.cover-legal{font-size:7.5pt;color:#94a3b8;max-width:380px;text-align:right;line-height:1.5}
+@page{margin:16mm 14mm;size:A4}
+.section{page-break-inside:avoid;margin-bottom:28px}
+.section-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+.section-title{font-family:'Source Serif 4',serif;font-size:13pt;font-weight:700;color:#0f1f3d}
+.section-sub{font-size:8pt;color:#64748b}
+table{width:100%;border-collapse:collapse;font-size:8.5pt;page-break-inside:auto}
+thead{display:table-header-group}tr{page-break-inside:avoid}
+th{background:#0f1f3d;color:#fff;padding:7px 9px;text-align:left;font-size:7.5pt;font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:6px 9px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+tr:nth-child(even) td{background:#fafbfc}
+.legend{display:flex;gap:16px;padding:8px 12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;margin-bottom:12px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:7.5pt;color:#475569}
+.legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+.page-footer{position:fixed;bottom:0;left:14mm;right:14mm;height:12mm;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;font-size:7pt;color:#94a3b8}
+.sig-area{margin-top:36px;page-break-inside:avoid}
+</style></head><body>
+
+<!-- PORTADA -->
+<div class="cover">
+  <div class="cover-logo-area"><div class="cover-logo">Aqua<span>Dash</span></div><div class="cover-badge">Documento oficial</div></div>
+  <div>
+    <div style="font-size:9pt;font-weight:600;color:#0f6e56;text-transform:uppercase;letter-spacing:.12em;margin-bottom:18px">Registro de control sanitario</div>
+    <div class="cover-title">Control de<br>Legionella<br>${monthName} 2026</div>
+    <div class="cover-divider"></div>
+    <div class="cover-subtitle">Registro oficial de vigilancia y control conforme al Real Decreto 487/2022 y protocolo del Gobierno Vasco para instalaciones de agua caliente sanitaria.</div>
+  </div>
+  <div class="cover-meta-grid">
+    <div class="cover-meta-item"><label>Período</label><p>${monthName} 2026</p></div>
+    <div class="cover-meta-item"><label>Fecha de emisión</label><p>${today}</p></div>
+    <div class="cover-meta-item"><label>Mediciones temperatura</label><p>${tempsMonth.length} registros</p></div>
+  </div>
+  <div class="cover-footer">
+    <div class="cover-footer-text">Generado por <strong>AquaDash</strong> · Sistema de gestión de instalaciones acuáticas</div>
+    <div class="cover-legal">Documento emitido electrónicamente. Los datos corresponden a mediciones registradas por personal técnico cualificado.</div>
+  </div>
+</div>
+
+<div class="page-footer"><span><strong>AquaDash</strong> — Control Legionella · ${monthName} 2026</span><span>Emitido: ${today}</span></div>
+
+<div class="legend">
+  <strong style="font-size:8pt;color:#334155;margin-right:6px">Leyenda:</strong>
+  <div class="legend-item"><div class="legend-dot" style="background:#15803d"></div>Conforme</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>Fuera de rango / No conforme</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>Pendiente</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#888"></div>Sin dato</div>
+</div>
+
+<!-- 1. TEMPERATURAS ACS -->
+<div class="section">
+  <div class="section-header"><div class="section-title">1. Temperatura diaria ACS</div><div class="section-sub">Retorno ≥ 50°C · Depósitos ≥ 60°C</div></div>
+  ${tempsMonth.length === 0 ? '<p style="color:#94a3b8;font-size:9pt;padding:12px 0">Sin registros este mes</p>' : `
+  <table>
+    <thead><tr><th>Fecha</th><th>Tª Retorno (°C)</th><th>Tª Depósito 1 (°C)</th><th>Tª Depósito 2 (°C)</th><th>Ramal 1</th><th>Ramal 2</th></tr></thead>
+    <tbody>${tempRows}</tbody>
+  </table>`}
+</div>
+
+<!-- 2. BIOCIDA Y PH -->
+<div class="section" style="page-break-before:always">
+  <div class="section-header"><div class="section-title">2. Biocida y pH agua de entrada</div><div class="section-sub">Biocida 0.2–2.0 mg/L · pH 7.0–8.0</div></div>
+  ${biocidaMonth.length === 0 ? '<p style="color:#94a3b8;font-size:9pt;padding:12px 0">Sin registros este mes</p>' : `
+  <table>
+    <thead><tr><th>Fecha</th><th>Biocida (mg/L)</th><th>pH agua entrada</th><th>Punto de medida</th><th>Responsable</th><th>Resultado</th></tr></thead>
+    <tbody>${bioRows}</tbody>
+  </table>`}
+</div>
+
+<!-- 3. PURGA SEMANAL ACUMULADORES -->
+<div class="section" style="page-break-before:always">
+  <div class="section-header"><div class="section-title">3. Purga semanal acumuladores</div><div class="section-sub">Frecuencia: semanal · Sistema ACS 2×5000L</div></div>
+  <table>
+    <thead><tr><th>Semana</th><th>Fecha de realización</th><th>Responsable</th><th>Estado</th></tr></thead>
+    <tbody>${purgaSemRows}</tbody>
+  </table>
+</div>
+
+<!-- 4. TURBIDEZ SEMANAL -->
+<div class="section">
+  <div class="section-header"><div class="section-title">4. Medida semanal de turbidez</div><div class="section-sub">Referencia: ≤ 1 UNF en puntos terminales</div></div>
+  <table>
+    <thead><tr><th>Semana</th><th>Turbidez (UNF)</th><th>Punto de medida</th><th>Responsable</th></tr></thead>
+    <tbody>${turbidezRows}</tbody>
+  </table>
+</div>
+
+<!-- 5. APERTURA PUNTOS TERMINALES -->
+${aperturaMonth.length > 0 ? `
+<div class="section" style="page-break-before:always">
+  <div class="section-header"><div class="section-title">5. Apertura semanal puntos terminales</div><div class="section-sub">✓ = Abierto · ✗ = No abierto · — = Sin dato</div></div>
+  <table>
+    <thead><tr><th>Punto terminal</th><th>Ubicación</th><th style="text-align:center">S1</th><th style="text-align:center">S2</th><th style="text-align:center">S3</th><th style="text-align:center">S4</th><th style="text-align:center">S5</th></tr></thead>
+    <tbody>${aperturaRows}</tbody>
+  </table>
+</div>` : ''}
+
+<!-- FIRMAS -->
+<div class="sig-area">
+  <div class="section-header"><div class="section-title">Validación y firmas</div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;margin-top:20px">
+    ${['Técnico responsable','Supervisor de instalación','Responsable sanitario'].map(r=>`
+    <div><p style="font-size:8pt;color:#64748b;margin-bottom:44px">${r}</p>
+    <div style="border-top:1px solid #334155;padding-top:6px"><p style="font-size:8pt;color:#94a3b8">Nombre y firma</p></div></div>`).join('')}
+  </div>
+  <div style="margin-top:24px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
+    <p style="font-size:7.5pt;color:#64748b;line-height:1.6"><strong>Nota legal:</strong> Documento oficial de control de legionella conforme al Real Decreto 487/2022 sobre instalaciones de riesgo de proliferación y dispersión de Legionella. Emitido mediante sistema informatizado AquaDash. En caso de incumplimiento de los valores de referencia, se tomarán las medidas correctoras establecidas en el Plan de Mantenimiento.</p>
+  </div>
+</div>
+
+</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (win) win.onload = () => { setTimeout(() => { win.print(); URL.revokeObjectURL(url); }, 800); };
+}
+
 export default function LegionellaPage() {
   const { hasPermission, legionellaTemps, legionellaBiocida, alerts, addLegionellaTemp, addLegionellaBiocida } = useApp();
   const [tab, setTab] = useState<'temperaturas' | 'biocida' | 'semanales' | 'mensuales'>('temperaturas');
@@ -207,12 +426,15 @@ export default function LegionellaPage() {
           <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#0f1f3d', margin: '0 0 4px' }}>🧫 Legionella</h1>
           <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Control ACS: temperaturas, biocida y pH en instalación</p>
         </div>
-        {canEdit && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={() => exportLegionellaPDF(selectedMonth, tempsMonth, biocidaMonth, purgaSemMonth, turbidezMonth, aperturaMonth)}>
+            📄 Exportar PDF Sanidad
+          </button>
+          {canEdit && (<>
             <button className="btn btn-primary" onClick={() => openForm('temp')}>+ Temperatura</button>
             <button className="btn btn-secondary" onClick={() => openForm('biocida')}>+ Biocida/pH</button>
-          </div>
-        )}
+          </>)}
+        </div>
       </div>
 
       {/* Alerts */}
