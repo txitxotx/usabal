@@ -382,7 +382,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Turbidez elevada en ${pool}`, value: String(turb), threshold: `<=${THRESHOLDS.turbidez.max} NTU`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'turbidez' });
       }
     }
-      const temp = rec.params.temperatura[pool];
+      const temp = rec.params.temperatura[pool as PoolName];
       if (temp !== null && temp !== undefined) {
         const tr = TEMP_AGUA_THRESHOLDS[pool] ?? { min: 0, max: 40 };
         if (temp < tr.min || temp > tr.max) {
