@@ -327,6 +327,7 @@ function valueClass(v: number | null | undefined, min: number, max: number) {
 
 interface PurgaSemanal { id: string; year: number; month: number; week: number; fecha_realizacion: string | null; nombre: string | null; realizada: boolean; }
 interface TurbidezSemanal { id: string; year: number; month: number; week: number; turbidez: number | null; punto_medida: string | null; nombre: string | null; }
+interface AperturaSemanal { id: string; year: number; month: number; week: number; todos_abiertos: boolean; fecha_realizacion: string | null; nombre: string | null; observaciones: string | null; }
 interface AperturaTerminal { id: string; year: number; month: number; planta: string | null; ramal: string | null; punto_terminal: string | null; ubicacion: string | null; semana_1: string | null; semana_2: string | null; semana_3: string | null; semana_4: string | null; semana_5: string | null; }
 
 
@@ -337,7 +338,7 @@ function exportLegionellaPDF(
   biocidaMonth: any[],
   purgaSemMonth: any[],
   turbidezMonth: any[],
-  aperturaMonth: any[],
+  aperturaSemMonth: { year:number; month:number; week:number; todos_abiertos:boolean; fecha_realizacion:string|null; nombre:string|null }[],
 ) {
   const today = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
   const monthName = MONTHS[month - 1];
@@ -388,18 +389,30 @@ function exportLegionellaPDF(
     </tr>`;
   }).join('');
 
-  // Apertura: use MASTER LIST (all 289 points from excel), overlay with DB results
-  const sv = (v:string|null) => !v||v==='X'?'—':(v.toLowerCase()==='si'?'✓':'✗');
-  const sc = (v:string|null) => !v||v==='X'?'#888':(v.toLowerCase()==='si'?'#15803d':'#dc2626');
+  // Apertura: build semana summary from simple check table, then list all 289 points
+  // Each semana row says whether ALL terminals were opened that week
+  const semLookup: Record<number, typeof aperturaSemMonth[0]> = {};
+  for (const s of aperturaSemMonth) { semLookup[s.week] = s; }
 
-  // Build lookup from DB data: key = "ramal|punto" → semanas
-  const dbLookup: Record<string, any> = {};
-  for (const a of aperturaMonth) {
-    const key = `${(a.ramal||'').toLowerCase()}|${(a.punto_terminal||'').toLowerCase()}`;
-    dbLookup[key] = a;
-  }
+  const svSem = (week: number) => {
+    const s = semLookup[week];
+    if (!s) return {v:'—', c:'#888'};
+    return s.todos_abiertos ? {v:'✓', c:'#15803d'} : {v:'✗', c:'#dc2626'};
+  };
 
-  // Group master list by planta then ramal
+  // Summary header rows (one per week)
+  const aperturaSummaryRows = [1,2,3,4,5].map(w => {
+    const s = semLookup[w];
+    const sv2 = svSem(w);
+    return `<tr>
+      <td style="font-weight:600">Semana ${w}</td>
+      <td>${s?.fecha_realizacion??'—'}</td>
+      <td style="text-transform:capitalize">${s?.nombre??'—'}</td>
+      <td style="color:${sv2.c};font-weight:700;font-size:12pt">${sv2.v} ${s ? (s.todos_abiertos ? 'Todos abiertos' : 'No todos abiertos') : 'Pendiente'}</td>
+    </tr>`;
+  }).join('');
+
+  // Full point list: group master list by planta then ramal, apply semana results to all
   const byPlantaRamal: Record<string, Record<string, typeof APERTURA_PUNTOS_MAESTRO>> = {};
   for (const p of APERTURA_PUNTOS_MAESTRO) {
     if (!byPlantaRamal[p.planta]) byPlantaRamal[p.planta] = {};
@@ -408,20 +421,14 @@ function exportLegionellaPDF(
   }
 
   const aperturaRows = Object.entries(byPlantaRamal).map(([planta, ramales]) => {
-    const plantaHeader = `<tr style="background:#0f1f3d"><td colspan="7" style="font-weight:700;color:#fff;padding:7px 10px;font-size:9.5pt;text-transform:uppercase;letter-spacing:.04em">${planta}</td></tr>`;
+    const plantaHeader = `<tr style="background:#0f1f3d"><td colspan="7" style="font-weight:700;color:#fff;padding:7px 10px;font-size:9pt;text-transform:uppercase;letter-spacing:.04em">${planta}</td></tr>`;
     const ramalRows = Object.entries(ramales).map(([ramal, pts]) => {
-      const ramalHeader = `<tr style="background:#f1f5f9"><td colspan="7" style="font-weight:700;color:#334155;text-transform:capitalize;padding:5px 10px;font-size:9pt;padding-left:20px">↳ ${ramal}</td></tr>`;
+      const ramalHeader = `<tr style="background:#f1f5f9"><td colspan="7" style="font-weight:700;color:#334155;text-transform:capitalize;padding:5px 10px 5px 20px;font-size:8.5pt">↳ ${ramal}</td></tr>`;
       const ptRows = pts.map(p => {
-        const dbKey = `${p.ramal.toLowerCase()}|${p.punto.toLowerCase()}`;
-        const dbRow = dbLookup[dbKey];
         return `<tr>
-          <td style="font-size:9pt;text-transform:uppercase;font-weight:600;padding-left:28px">${p.punto}</td>
-          <td style="font-size:8.5pt;color:#64748b">${p.ubicacion}</td>
-          <td style="text-align:center;color:${sc(dbRow?.semana_1??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_1??null)}</td>
-          <td style="text-align:center;color:${sc(dbRow?.semana_2??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_2??null)}</td>
-          <td style="text-align:center;color:${sc(dbRow?.semana_3??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_3??null)}</td>
-          <td style="text-align:center;color:${sc(dbRow?.semana_4??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_4??null)}</td>
-          <td style="text-align:center;color:${sc(dbRow?.semana_5??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_5??null)}</td>
+          <td style="font-size:8.5pt;text-transform:uppercase;font-weight:600;padding-left:28px">${p.punto}</td>
+          <td style="font-size:8pt;color:#64748b">${p.ubicacion}</td>
+          ${[1,2,3,4,5].map(w => { const sv2=svSem(w); return `<td style="text-align:center;color:${sv2.c};font-weight:700;font-size:10pt">${sv2.v}</td>`; }).join('')}
         </tr>`;
       }).join('');
       return ramalHeader + ptRows;
@@ -536,7 +543,13 @@ tr:nth-child(even) td{background:#fafbfc}
 <!-- 5. APERTURA PUNTOS TERMINALES -->
 ${`
 <div class="section" style="page-break-before:always">
-  <div class="section-header"><div class="section-title">5. Apertura semanal puntos terminales</div><div class="section-sub">✓ = Abierto · ✗ = No abierto · — = Sin dato</div></div>
+  <div class="section-header"><div class="section-title">5. Apertura semanal puntos terminales</div><div class="section-sub">Apertura manual de terminales no utilizados</div></div>
+  <p style="font-size:8.5pt;color:#475569;margin-bottom:12px">Resumen semanal: indica si se abrieron todos los puntos terminales de la instalación.</p>
+  <table style="margin-bottom:20px">
+    <thead><tr><th>Semana</th><th>Fecha</th><th>Responsable</th><th>Resultado</th></tr></thead>
+    <tbody>${aperturaSummaryRows}</tbody>
+  </table>
+  <p style="font-size:8.5pt;color:#475569;margin-bottom:10px">Listado completo de puntos terminales de la instalación (289 puntos):</p>
   <table>
     <thead><tr><th>Punto terminal</th><th>Ubicación</th><th style="text-align:center">S1</th><th style="text-align:center">S2</th><th style="text-align:center">S3</th><th style="text-align:center">S4</th><th style="text-align:center">S5</th></tr></thead>
     <tbody>${aperturaRows}</tbody>
@@ -596,6 +609,7 @@ export default function LegionellaPage() {
   const [purgaSemanal, setPurgaSemanal] = useState<PurgaSemanal[]>([]);
   const [turbidezSemanal, setTurbidezSemanal] = useState<TurbidezSemanal[]>([]);
   const [apertura, setApertura] = useState<AperturaTerminal[]>([]);
+  const [aperturaSemanal, setAperturaSemanal] = useState<AperturaSemanal[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
 
   useEffect(() => {
@@ -604,6 +618,7 @@ export default function LegionellaPage() {
         supabase.from('legionella_purga_semanal').select('*').order('year').order('month').order('week'),
         supabase.from('legionella_turbidez_semanal').select('*').order('year').order('month').order('week'),
         supabase.from('legionella_apertura_terminales').select('*').order('year').order('month'),
+        supabase.from('legionella_apertura_semanal').select('*').order('year').order('month').order('week'),
       ]);
       if (ps) setPurgaSemanal(ps);
       if (ts) setTurbidezSemanal(ts);
@@ -630,6 +645,7 @@ export default function LegionellaPage() {
   const purgaSemMonth = purgaSemanal.filter(p => p.month === selectedMonth);
   const turbidezMonth = turbidezSemanal.filter(t => t.month === selectedMonth);
   const aperturaMonth = apertura.filter(a => a.month === selectedMonth);
+  const aperturaSemMonth = aperturaSemanal.filter(a => a.month === selectedMonth);
 
   // KPIs compliance
   const semanasDone = purgaSemMonth.filter(p => p.realizada).length;
@@ -700,19 +716,18 @@ export default function LegionellaPage() {
         if (rows.length > 0) await supabase.from('legionella_termometros_ramal').insert(rows);
         setTermometrosData({});
       } else if (formType === 'apertura') {
-        // Single check per week for all points
-        const week_col = `semana_${aperturaWeek}` as 'semana_1'|'semana_2'|'semana_3'|'semana_4'|'semana_5';
-        const val = aperturaAllOpen ? 'si' : 'no';
         const m = parseInt(fMonth);
-        // Upsert all points for this month/week
-        const existing = apertura.filter(a => a.month === m);
-        if (existing.length > 0) {
-          for (const row of existing) {
-            await supabase.from('legionella_apertura_terminales').update({ [week_col]: val }).eq('id', row.id);
-          }
-        }
-        const { data } = await supabase.from('legionella_apertura_terminales').select('*').order('year').order('month');
-        if (data) setApertura(data);
+        const w = parseInt(aperturaWeek);
+        const id = `as${currentYear}${m.toString().padStart(2,'0')}${w}`;
+        await supabase.from('legionella_apertura_semanal').upsert({
+          id, year: currentYear, month: m, week: w,
+          todos_abiertos: aperturaAllOpen,
+          fecha_realizacion: fDate || null,
+          nombre: fNombre || null,
+          observaciones: null,
+        });
+        const { data } = await supabase.from('legionella_apertura_semanal').select('*').order('year').order('month').order('week');
+        if (data) setAperturaSemanal(data);
       }
       setFormOpen(false);
       resetForm();
@@ -735,7 +750,7 @@ export default function LegionellaPage() {
           <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Control ACS: temperaturas, biocida y pH en instalación</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" onClick={() => exportLegionellaPDF(selectedMonth, tempsMonth, biocidaMonth, purgaSemMonth, turbidezMonth, aperturaMonth)}>
+          <button className="btn btn-secondary" onClick={() => exportLegionellaPDF(selectedMonth, tempsMonth, biocidaMonth, purgaSemMonth, turbidezMonth, aperturaSemMonth)}>
             📄 Exportar PDF Sanidad
           </button>
           {canEdit && (<>
@@ -985,41 +1000,35 @@ export default function LegionellaPage() {
               </div>
             </div>
           </div>
-          {/* Apertura puntos terminales */}
-          {aperturaMonth.length > 0 && (
-            <div style={{ marginTop: '20px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0f1f3d', marginBottom: '12px' }}>🚪 Apertura puntos terminales — {MONTHS[selectedMonth-1]}</h3>
-              <div className="card" style={{ overflow: 'hidden' }}>
-                <div style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto' }}>
-                  <table className="data-table">
-                    <thead><tr><th>Planta</th><th>Ramal</th><th>Punto terminal</th><th>Ubicación</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th></tr></thead>
-                    <tbody>
-                      {aperturaMonth.map(a => {
-                        const badge = (v: string | null) => {
-                          if (!v || v === 'X') return <span style={{ color: '#94a3b8' }}>—</span>;
-                          const ok = v.toLowerCase() === 'si';
-                          return <span className={ok ? 'badge badge-ok' : 'badge badge-danger'} style={{ fontSize: '10px' }}>{ok ? '✓' : '✗'}</span>;
-                        };
-                        return (
-                          <tr key={a.id}>
-                            <td style={{ fontSize: '11px', color: '#64748b' }}>{a.planta ?? '—'}</td>
-                            <td style={{ fontSize: '11px', textTransform: 'capitalize' }}>{a.ramal ?? '—'}</td>
-                            <td style={{ fontSize: '11px', fontWeight: '600', textTransform: 'uppercase' }}>{a.punto_terminal ?? '—'}</td>
-                            <td style={{ fontSize: '11px', color: '#64748b' }}>{a.ubicacion ?? '—'}</td>
-                            <td style={{ textAlign: 'center' }}>{badge(a.semana_1)}</td>
-                            <td style={{ textAlign: 'center' }}>{badge(a.semana_2)}</td>
-                            <td style={{ textAlign: 'center' }}>{badge(a.semana_3)}</td>
-                            <td style={{ textAlign: 'center' }}>{badge(a.semana_4)}</td>
-                            <td style={{ textAlign: 'center' }}>{badge(a.semana_5)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+          {/* Apertura puntos terminales - tabla resumen igual que purga y turbidez */}
+          <div style={{ marginTop: '20px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0f1f3d', marginBottom: '12px' }}>🚪 Apertura puntos terminales — {MONTHS[selectedMonth-1]}</h3>
+            <div className="card" style={{ overflow: 'hidden' }}>
+              <table className="data-table">
+                <thead><tr><th>Semana</th><th>Fecha</th><th>Responsable</th><th>Resultado</th><th>Estado</th></tr></thead>
+                <tbody>
+                  {[1,2,3,4,5].map(week => {
+                    const r = aperturaSemMonth.find(a => a.week === week);
+                    return (
+                      <tr key={week}>
+                        <td style={{ fontWeight: '600' }}>S{week}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{r?.fecha_realizacion ?? '—'}</td>
+                        <td style={{ textTransform: 'capitalize', color: '#64748b' }}>{r?.nombre ?? '—'}</td>
+                        <td>
+                          {r ? (
+                            r.todos_abiertos
+                              ? <span style={{ fontSize: '12px', color: '#15803d', fontWeight: '600' }}>✓ Todos abiertos</span>
+                              : <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '600' }}>✗ No todos abiertos</span>
+                          ) : <span style={{ color: '#94a3b8' }}>—</span>}
+                        </td>
+                        <td>{r ? <span className="badge badge-ok">✓ Registrado</span> : <span className="badge badge-warning">Pendiente</span>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
         </div>
       )}
 
