@@ -4,6 +4,298 @@ import { useApp, THRESHOLDS } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, BarChart, Bar, Legend } from 'recharts';
 
+const APERTURA_PUNTOS_MAESTRO: {planta:string;ramal:string;punto:string;ubicacion:string}[] = [
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"GRIFO 1",ubicacion:"Vestuario hombres trabajadores"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"GRIFO 2",ubicacion:"Vestuario hombres trabajadores"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"GRIFO 3",ubicacion:"Vestuario hombres trabajadores"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"DUCHA 1 isomix",ubicacion:"Vestuario hombres trabajadores"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"DUCHA 2 isomix",ubicacion:"Vestuario hombres trabajadores"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"DUCHA 3 isomix",ubicacion:"Vestuario hombres trabajadores"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"GRIFO 1",ubicacion:"Vestuario mujeres limpieza"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"GRIFO 2",ubicacion:"Vestuario mujeres limpieza"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"DUCHA 1 isomix",ubicacion:"Vestuario mujeres limpieza"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"DUCHA 2 isomix",ubicacion:"Vestuario mujeres limpieza"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"DUCHA 3 isomix",ubicacion:"Vestuario mujeres limpieza"},
+  {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"GRIFO 1",ubicacion:"Aseo"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Vestuario -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Vestuario -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1 isomix",ubicacion:"Vestuario -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 2 isomix",ubicacion:"Vestuario -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 3 isomix",ubicacion:"Vestuario -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 4 isomix",ubicacion:"Vestuario -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 5 isomix",ubicacion:"Vestuario -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 6 isomix",ubicacion:"Vestuario -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Vestuario -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Vestuario -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1 isomix",ubicacion:"Vestuario -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 2 isomix",ubicacion:"Vestuario -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 3 isomix",ubicacion:"Vestuario -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 4 isomix",ubicacion:"Vestuario -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 5 isomix",ubicacion:"Vestuario -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 6 isomix",ubicacion:"Vestuario -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Vestuario -1.3"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Vestuario -1.3"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1 isomix",ubicacion:"Vestuario -1.3"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 2 isomix",ubicacion:"Vestuario -1.3"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 3 isomix",ubicacion:"Vestuario -1.3"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 4 isomix",ubicacion:"Vestuario -1.3"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 5 isomix",ubicacion:"Vestuario -1.3"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 6 isomix",ubicacion:"Vestuario -1.3"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Vestuario -1.4"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Vestuario -1.4"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1 isomix",ubicacion:"Vestuario -1.4"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 2 isomix",ubicacion:"Vestuario -1.4"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 3 isomix",ubicacion:"Vestuario -1.4"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 4 isomix",ubicacion:"Vestuario -1.4"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 5 isomix",ubicacion:"Vestuario -1.4"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 6 isomix",ubicacion:"Vestuario -1.4"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"vestuario arbitros -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1",ubicacion:"vestuario arbitros -1.1"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"vestuario arbitros -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1",ubicacion:"vestuario arbitros -1.2"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO",ubicacion:"Aseo hombres"},
+  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO",ubicacion:"Aseo mujeres"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Aseo zona médica"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Aseo zona médica"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO",ubicacion:"Vestuario médicos mujeres"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"DUCHA regulador manual",ubicacion:"Vestuario médicos mujeres"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO",ubicacion:"Vestuario médicos hombres"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"DUCHA regulador manual",ubicacion:"Vestuario médicos hombres"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Centro fisioterapia"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Centro fisioterapia"},
+  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 3",ubicacion:"Centro fisioterapia"},
+  {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 1 isomix",ubicacion:"Piscina"},
+  {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 2 isomix",ubicacion:"Piscina"},
+  {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 3 isomix",ubicacion:"Piscina"},
+  {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 4 isomix",ubicacion:"Piscina"},
+  {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 5 isomix",ubicacion:"Piscina"},
+  {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 6 isomix",ubicacion:"Piscina"},
+  {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 7 isomix",ubicacion:"Piscina"},
+  {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 8 isomix",ubicacion:"Piscina"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO",ubicacion:"Aseo mujeres"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"Aseo hombres"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"Aseo hombres"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO",ubicacion:"Aseo minusválidos"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 8 agua fría",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 9 agua fría",ubicacion:"vestuario 0.1"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 8 agua fría",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 9 agua fría",ubicacion:"vestuario 0.2"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 8 agua fría",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 9 agua fría",ubicacion:"vestuario 0.3"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.4 limpieza"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.4 limpieza"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 1",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 2",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 3",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 4",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 5",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 6",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 7",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 8",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 9",ubicacion:"vestuario 0.5"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 1",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 2",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 3",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 4",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 5",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 6",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 7",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 8",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 9",ubicacion:"vestuario 0.6"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.7 personal"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.7 personal"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.7 personal"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 4",ubicacion:"vestuario 0.7 personal"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario 0.7 personal"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario 0.7 personal"},
+  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario 0.7 personal"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO",ubicacion:"vestuario 1 familiar"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO",ubicacion:"vestuario 2 familiar"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO",ubicacion:"vestuario 3 minusválidos"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA regulador manual",ubicacion:"vestuario 3 minusválidos"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO",ubicacion:"vestuario 4 minusválidos"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA regulador manual",ubicacion:"vestuario 4 minusválidos"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 1",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 2",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 3",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 4",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 5",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 6",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario mujeres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 1",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 2",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 3",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 4",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 5",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 6",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 1 regulador manual",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 2 regulador manual",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 3 regulador manual",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 4 regulador manual",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 5 regulador manual",ubicacion:"Vestuario hombres"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Vestuario 1"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA",ubicacion:"Vestuario 1"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Vestuario 2"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Vestuario 3 minusválidos"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA",ubicacion:"Vestuario 3 minusválidos"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Vestuario 4 minusválidos"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA",ubicacion:"Vestuario 4 minusválidos"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Aseo poco uso"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"Servicios mujeres"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"Servicios mujeres"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 3",ubicacion:"Servicios mujeres"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 4",ubicacion:"Servicios mujeres"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"Servicios hombres"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"Servicios hombres"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Zona socorristas enfermería"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 1",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 2",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 3",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 4",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 5",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 6",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 7",ubicacion:"vestuario mujeres 5"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario mujeres 6"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 1",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 2",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 3",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 4",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 5",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 6",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 7",ubicacion:"Vestuario hombres 7"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"Vestuario hombres 8"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"Vestuario hombres 8"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 1 regulador manual",ubicacion:"Vestuario hombres 8"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 2 regulador manual",ubicacion:"Vestuario hombres 8"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 3 regulador manual",ubicacion:"Vestuario hombres 8"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 4 regulador manual",ubicacion:"Vestuario hombres 8"},
+  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 5 regulador manual",ubicacion:"Vestuario hombres 8"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Aseo hombres"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Aseo hombres"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Aseo mujeres"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Aseo mujeres"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.1"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.1"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.1"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.1"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.1"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.1"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.1"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.2"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.2"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.2"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.2"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.2"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.2"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.2"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.2"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.3"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.3"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.3"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.3"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.3"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.3"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.3"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.3"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.4"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.4"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.4"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.4"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.4"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.4"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.4"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.4"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.5"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.5"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.5"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.5"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.5"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.5"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.5"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.5"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.6"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.6"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.6"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.6"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.6"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.6"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.6"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.6"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO",ubicacion:"Vestuario arbitros1.1"},
+  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO anulado",ubicacion:"Vestuario arbitros1.2"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO",ubicacion:"Aseo minusválidos"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 1",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 2",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 3",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 4",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 5",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 6",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 7",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 8",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 9",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 10",ubicacion:"Servicios mujeres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 1",ubicacion:"Servicios hombres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 2",ubicacion:"Servicios hombres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 3",ubicacion:"Servicios hombres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 4",ubicacion:"Servicios hombres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 5",ubicacion:"Servicios hombres"},
+  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 6",ubicacion:"Servicios hombres"},
+];
+
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -96,29 +388,45 @@ function exportLegionellaPDF(
     </tr>`;
   }).join('');
 
-  // Apertura: group by planta/ramal
-  const byRamal: Record<string, any[]> = {};
+  // Apertura: use MASTER LIST (all 289 points from excel), overlay with DB results
+  const sv = (v:string|null) => !v||v==='X'?'—':(v.toLowerCase()==='si'?'✓':'✗');
+  const sc = (v:string|null) => !v||v==='X'?'#888':(v.toLowerCase()==='si'?'#15803d':'#dc2626');
+
+  // Build lookup from DB data: key = "ramal|punto" → semanas
+  const dbLookup: Record<string, any> = {};
   for (const a of aperturaMonth) {
-    const key = (a.ramal||'Sin ramal');
-    if (!byRamal[key]) byRamal[key] = [];
-    byRamal[key].push(a);
+    const key = `${(a.ramal||'').toLowerCase()}|${(a.punto_terminal||'').toLowerCase()}`;
+    dbLookup[key] = a;
   }
-  const aperturaRows = Object.entries(byRamal).map(([ramal, points]) => {
-    const headerRow = `<tr style="background:#f1f5f9"><td colspan="7" style="font-weight:700;color:#0f1f3d;text-transform:capitalize;padding:6px 10px">${ramal}</td></tr>`;
-    const ptRows = points.map(a => {
-      const sv = (v:string|null) => !v||v==='X'?'—':(v.toLowerCase()==='si'?'✓':'✗');
-      const sc = (v:string|null) => !v||v==='X'?'#888':(v.toLowerCase()==='si'?'#15803d':'#dc2626');
-      return `<tr>
-        <td style="font-size:10pt;text-transform:uppercase;font-weight:600">${a.punto_terminal??'—'}</td>
-        <td style="font-size:9pt;color:#64748b">${a.ubicacion??'—'}</td>
-        <td style="text-align:center;color:${sc(a.semana_1)};font-weight:700">${sv(a.semana_1)}</td>
-        <td style="text-align:center;color:${sc(a.semana_2)};font-weight:700">${sv(a.semana_2)}</td>
-        <td style="text-align:center;color:${sc(a.semana_3)};font-weight:700">${sv(a.semana_3)}</td>
-        <td style="text-align:center;color:${sc(a.semana_4)};font-weight:700">${sv(a.semana_4)}</td>
-        <td style="text-align:center;color:${sc(a.semana_5)};font-weight:700">${sv(a.semana_5)}</td>
-      </tr>`;
+
+  // Group master list by planta then ramal
+  const byPlantaRamal: Record<string, Record<string, typeof APERTURA_PUNTOS_MAESTRO>> = {};
+  for (const p of APERTURA_PUNTOS_MAESTRO) {
+    if (!byPlantaRamal[p.planta]) byPlantaRamal[p.planta] = {};
+    if (!byPlantaRamal[p.planta][p.ramal]) byPlantaRamal[p.planta][p.ramal] = [];
+    byPlantaRamal[p.planta][p.ramal].push(p);
+  }
+
+  const aperturaRows = Object.entries(byPlantaRamal).map(([planta, ramales]) => {
+    const plantaHeader = `<tr style="background:#0f1f3d"><td colspan="7" style="font-weight:700;color:#fff;padding:7px 10px;font-size:9.5pt;text-transform:uppercase;letter-spacing:.04em">${planta}</td></tr>`;
+    const ramalRows = Object.entries(ramales).map(([ramal, pts]) => {
+      const ramalHeader = `<tr style="background:#f1f5f9"><td colspan="7" style="font-weight:700;color:#334155;text-transform:capitalize;padding:5px 10px;font-size:9pt;padding-left:20px">↳ ${ramal}</td></tr>`;
+      const ptRows = pts.map(p => {
+        const dbKey = `${p.ramal.toLowerCase()}|${p.punto.toLowerCase()}`;
+        const dbRow = dbLookup[dbKey];
+        return `<tr>
+          <td style="font-size:9pt;text-transform:uppercase;font-weight:600;padding-left:28px">${p.punto}</td>
+          <td style="font-size:8.5pt;color:#64748b">${p.ubicacion}</td>
+          <td style="text-align:center;color:${sc(dbRow?.semana_1??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_1??null)}</td>
+          <td style="text-align:center;color:${sc(dbRow?.semana_2??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_2??null)}</td>
+          <td style="text-align:center;color:${sc(dbRow?.semana_3??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_3??null)}</td>
+          <td style="text-align:center;color:${sc(dbRow?.semana_4??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_4??null)}</td>
+          <td style="text-align:center;color:${sc(dbRow?.semana_5??null)};font-weight:700;font-size:11pt">${sv(dbRow?.semana_5??null)}</td>
+        </tr>`;
+      }).join('');
+      return ramalHeader + ptRows;
     }).join('');
-    return headerRow + ptRows;
+    return plantaHeader + ramalRows;
   }).join('');
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
@@ -226,14 +534,14 @@ tr:nth-child(even) td{background:#fafbfc}
 </div>
 
 <!-- 5. APERTURA PUNTOS TERMINALES -->
-${aperturaMonth.length > 0 ? `
+${`
 <div class="section" style="page-break-before:always">
   <div class="section-header"><div class="section-title">5. Apertura semanal puntos terminales</div><div class="section-sub">✓ = Abierto · ✗ = No abierto · — = Sin dato</div></div>
   <table>
     <thead><tr><th>Punto terminal</th><th>Ubicación</th><th style="text-align:center">S1</th><th style="text-align:center">S2</th><th style="text-align:center">S3</th><th style="text-align:center">S4</th><th style="text-align:center">S5</th></tr></thead>
     <tbody>${aperturaRows}</tbody>
   </table>
-</div>` : ''}
+</div>`}
 
 <!-- FIRMAS -->
 <div class="sig-area">
