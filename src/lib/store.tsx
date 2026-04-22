@@ -381,7 +381,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (turb !== null && turb !== undefined && turb > THRESHOLDS.turbidez.max) {
         newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Turbidez elevada en ${pool}`, value: String(turb), threshold: `<=${THRESHOLDS.turbidez.max} NTU`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'turbidez' });
       }
-    }
       const temp = rec.params.temperatura[pool as PoolName];
       if (temp !== null && temp !== undefined) {
         const tr = TEMP_AGUA_THRESHOLDS[pool] ?? { min: 0, max: 40 };
@@ -389,6 +388,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Temperatura del agua fuera de rango en ${pool}`, value: String(temp), threshold: `${tr.min}-${tr.max}°C`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'temperatura' });
         }
       }
+    }
     const { co2Interior, co2Exterior } = rec.params;
     if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
       newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)), threshold: `<=${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'co2Delta' });
