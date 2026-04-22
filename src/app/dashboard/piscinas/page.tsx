@@ -375,7 +375,7 @@ export default function PiscinasPage() {
       {/* Alerts */}
       {poolAlerts.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
-          {poolAlerts.slice(0, 3).map(a => (
+          {poolAlerts.slice(0, 5).map(a => (
             <div key={a.id} className={`alert-banner alert-${a.type === 'danger' ? 'danger' : 'warning'}`} style={{ marginBottom: '8px' }}>
               <span>{a.type === 'danger' ? '🚨' : '⚠️'}</span>
               <div><strong>{a.message}</strong> — Valor: <strong>{a.value}</strong> (límite: {a.threshold}) · {a.timestamp}</div>
@@ -427,9 +427,16 @@ export default function PiscinasPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: '#0f1f3d' }}>{pool}</h3>
                   <span className={`badge ${issues.length === 0 ? 'badge-ok' : 'badge-danger'}`}>
-                    {issues.length === 0 ? '✓ OK' : `${issues.length} incidencia${issues.length > 1 ? 's' : ''}`}
+                    {issues.length === 0 ? '✓ OK' : `⚠ ${issues.join(', ')}`}
                   </span>
                 </div>
+                {issues.length > 0 && (
+                  <div style={{ marginBottom: '10px', padding: '7px 10px', background: '#fef2f2', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                    <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: '#dc2626' }}>
+                      🚨 Fuera de rango: {issues.join(' · ')}
+                    </p>
+                  </div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {[
                     { label: 'Cloro libre', val: cl, min: 0.5, max: 2.0, unit: 'mg/L' },
