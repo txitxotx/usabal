@@ -63,7 +63,7 @@ export default function RecirculacionPage() {
   const [selectedPool, setSelectedPool] = useState<string>(activePools[0] ?? 'P. Grande');
   const [tab, setTab] = useState<'resumen' | 'tabla'>('resumen');
   const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState({ ...EMPTY_FORM, pool: activePools[0] ?? '' });
+  const [form, setForm] = useState<typeof EMPTY_FORM>({ ...EMPTY_FORM, pool: activePools[0] ?? '' });
   const [saving, setSaving] = useState(false);
 
   if (!hasPermission('view_recirculacion')) {
