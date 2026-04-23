@@ -75,11 +75,15 @@ export interface LegionellaTemp {
 }
 
 export interface LegionellaBiocida {
-  id: string; date: string; biocida: number; ph: number;
+  id: string; date: string; biocida: number | null; ph: number | null;
   puntoDeMedida: string; nombre: string;
 }
 
 export interface IncendioCheck {
   id: string; date: string; tipo: string; zona: string;
-  resultado: string; observaciones?: string; responsable: string;
+  resultado: 'OK' | 'FALLO' | 'PENDIENTE'; observaciones?: string; responsable: string;
+}
+
+export interface Threshold {
+  parameter: string; pool?: PoolName; min: number; max: number; unit: string;
 }
