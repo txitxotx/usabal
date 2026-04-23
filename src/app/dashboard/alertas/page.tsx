@@ -8,12 +8,16 @@ const SECTION_LABELS: Record<string, string> = {
 
 const PARAM_LABELS: Record<string, string> = {
   cloroLibre: 'Cloro libre (mg/L)', cloroCombinado: 'Cloro combinado (mg/L)',
-  ph: 'pH', temperatura: 'Temperatura (°C)', turbidez: 'Turbidez (NTU)', co2Delta: 'ΔCO₂ (ppm)',
+  ph: 'pH', temperatura: 'Temperatura agua (°C)', turbidez: 'Turbidez (NTU)', co2Delta: 'ΔCO₂ (ppm)',
+  tempAmbiente: 'Temp. ambiente (°C)', tempAmbienteGrande: 'Temp. amb. P. Grande (°C)',
+  tempAmbienteSpa: 'Temp. amb. SPA (°C)', tempAmbientePequena: 'Temp. amb. P. Pequeña (°C)',
+  humedadRelativa: 'Humedad relativa (%)', humedadGrande: 'Humedad P. Grande (%)',
+  humedadSpa: 'Humedad SPA (%)', humedadPequena: 'Humedad P. Pequeña (%)',
 };
 
 export default function AlertasPage() {
   const { hasPermission, alerts, alertHistory, alertRepairs, resolveAlertWithRepair, currentUser } = useApp();
-  const [filter, setFilter] = useState<'all' | 'danger' | 'warning' | 'resolved'>('all');
+  const [filter, setFilter] = useState<'all' | 'danger' | 'warning'>('all');
   const [sectionFilter, setSectionFilter] = useState('');
   const [tab, setTab] = useState<'activas' | 'historico' | 'reparaciones'>('activas');
   const [resolveModal, setResolveModal] = useState<{
@@ -21,7 +25,8 @@ export default function AlertasPage() {
     pool?: string; paramDate?: string; paramSession?: string; parameterKey?: string;
   } | null>(null);
   const [correctedValue, setCorrectedValue] = useState('');
-  const [saveRepair, setSaveRepair] = useState(true); // whether to also overwrite the stored measurement
+  const [saveRepair, setSaveRepair] = useState(true);
+  const [actionNotes, setActionNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
   if (!hasPermission('view_alerts')) {
@@ -30,15 +35,15 @@ export default function AlertasPage() {
 
   const filtered = alerts
     .filter(a => {
-      if (filter === 'danger')  return !a.resolved && a.type === 'danger';
-      if (filter === 'warning') return !a.resolved && a.type === 'warning';
-      return !a.resolved;
+      if (filter === 'danger')  return a.type === 'danger';
+      if (filter === 'warning') return a.type === 'warning';
+      return true;
     })
     .filter(a => !sectionFilter || a.section === sectionFilter);
 
   const counts = {
-    danger:   alerts.filter(a => !a.resolved && a.type === 'danger').length,
-    warning:  alerts.filter(a => !a.resolved && a.type === 'warning').length,
+    danger:   alerts.filter(a => a.type === 'danger').length,
+    warning:  alerts.filter(a => a.type === 'warning').length,
     resolved: alertHistory.length,
   };
 
@@ -49,27 +54,43 @@ export default function AlertasPage() {
     historyByPool[key].push(a);
   }
 
+  const isAmbientKey = (key?: string) => key && [
+    'tempAmbiente', 'tempAmbienteGrande', 'tempAmbienteSpa', 'tempAmbientePequena',
+    'humedadRelativa', 'humedadGrande', 'humedadSpa', 'humedadPequena',
+  ].includes(key);
+
   const handleResolve = async () => {
     if (!resolveModal || !correctedValue.trim()) return;
     setSaving(true);
     try {
       const numVal = parseFloat(correctedValue);
-      const repair = (saveRepair && resolveModal.paramDate && resolveModal.paramSession && resolveModal.parameterKey && resolveModal.pool && !isNaN(numVal))
+      // Para parámetros de ambiente no necesitamos pool (es un campo escalar en la fila)
+      const needsPool = resolveModal.parameterKey && !isAmbientKey(resolveModal.parameterKey);
+      const hasEnoughData = resolveModal.paramDate && resolveModal.paramSession && resolveModal.parameterKey;
+      const poolOk = !needsPool || resolveModal.pool;
+
+      const repair = (saveRepair && hasEnoughData && poolOk && !isNaN(numVal))
         ? {
-            date: resolveModal.paramDate,
-            session: resolveModal.paramSession,
+            date: resolveModal.paramDate!,
+            session: resolveModal.paramSession!,
             pool: resolveModal.pool,
-            paramKey: resolveModal.parameterKey,
-            oldValue: typeof resolveModal.currentValue === 'number' ? resolveModal.currentValue : parseFloat(String(resolveModal.currentValue ?? '')),
+            paramKey: resolveModal.parameterKey!,
+            oldValue: typeof resolveModal.currentValue === 'number'
+              ? resolveModal.currentValue
+              : parseFloat(String(resolveModal.currentValue ?? '')),
             correctedValue: numVal,
           }
         : undefined;
 
       await resolveAlertWithRepair(
-        resolveModal.id, correctedValue, currentUser?.name || 'Admin', repair
+        resolveModal.id, correctedValue, currentUser?.name || 'Admin',
+        repair,
+        actionNotes.trim() || undefined,
       );
       setResolveModal(null);
       setCorrectedValue('');
+      setActionNotes('');
+      setSaveRepair(true);
     } catch (e) {
       console.error(e);
       alert('Error al guardar la reparación.');
@@ -78,7 +99,8 @@ export default function AlertasPage() {
     }
   };
 
-  const hasRepairData = resolveModal?.paramDate && resolveModal?.paramSession && resolveModal?.parameterKey && resolveModal?.pool;
+  const hasRepairData = resolveModal?.paramDate && resolveModal?.paramSession && resolveModal?.parameterKey &&
+    (!isAmbientKey(resolveModal.parameterKey) ? resolveModal.pool : true);
 
   return (
     <div>
@@ -125,9 +147,8 @@ export default function AlertasPage() {
       {/* ── ALERTAS ACTIVAS ── */}
       {tab === 'activas' && (
         <>
-          {/* Filters */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            {([['all','Todas'], ['danger','Críticas'], ['warning','Avisos']] as const).map(([val, lbl]) => (
+            {([['all', 'Todas'], ['danger', 'Críticas'], ['warning', 'Avisos']] as const).map(([val, lbl]) => (
               <button key={val} onClick={() => setFilter(val)}
                 style={{ padding: '6px 14px', borderRadius: '20px', border: `2px solid ${filter === val ? (val === 'danger' ? '#ef4444' : val === 'warning' ? '#f59e0b' : '#0077cc') : '#e2eaf4'}`, background: filter === val ? (val === 'danger' ? '#fee2e2' : val === 'warning' ? '#fef3c7' : '#dbeafe') : '#fff', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                 {lbl}
@@ -167,6 +188,7 @@ export default function AlertasPage() {
                   <button className="btn btn-primary btn-sm" onClick={() => {
                     setResolveModal({ id: a.id, message: a.message, currentValue: a.value, pool: a.pool, paramDate: a.paramDate, paramSession: a.paramSession, parameterKey: a.parameterKey });
                     setCorrectedValue('');
+                    setActionNotes('');
                     setSaveRepair(true);
                   }} style={{ flex: 'none', whiteSpace: 'nowrap' }}>
                     🔧 Resolver
@@ -193,15 +215,19 @@ export default function AlertasPage() {
                   <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                       <thead><tr>
-                        <th>Mensaje</th><th>Valor</th><th>Límite</th><th>Valor corregido</th><th>Resuelto por</th><th>Fecha resolución</th>
+                        <th>Mensaje</th><th>Valor</th><th>Límite</th><th>Valor corregido</th>
+                        <th>Actuación realizada</th><th>Resuelto por</th><th>Fecha resolución</th>
                       </tr></thead>
                       <tbody>
                         {items.map(a => (
                           <tr key={a.id}>
-                            <td style={{ maxWidth: '280px' }}><strong>{a.message}</strong></td>
+                            <td style={{ maxWidth: '220px' }}><strong>{a.message}</strong></td>
                             <td style={{ fontFamily: 'var(--font-mono)', color: '#dc2626' }}>{a.value ?? '—'}</td>
                             <td style={{ fontFamily: 'var(--font-mono)', color: '#64748b' }}>{a.threshold ?? '—'}</td>
                             <td className="val-ok" style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{a.resolvedValue ?? '—'}</td>
+                            <td style={{ maxWidth: '240px', fontSize: '12px', color: a.notes ? '#0f1f3d' : '#94a3b8', fontStyle: a.notes ? 'normal' : 'italic' }}>
+                              {a.notes ?? 'Sin nota'}
+                            </td>
                             <td>{a.resolvedBy ?? '—'}</td>
                             <td style={{ whiteSpace: 'nowrap', color: '#64748b' }}>{a.resolvedAt ?? '—'}</td>
                           </tr>
@@ -220,7 +246,7 @@ export default function AlertasPage() {
       {tab === 'reparaciones' && (
         <div>
           <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '13px', color: '#1e40af' }}>
-            <strong>📋 Trazabilidad de correcciones:</strong> Registro de todas las mediciones que fueron corregidas al resolver una alerta. El valor original queda guardado para auditoría.
+            <strong>📋 Trazabilidad de correcciones:</strong> Registro de todas las mediciones corregidas al resolver una alerta. El valor original queda guardado para auditoría.
           </div>
           {alertRepairs.length === 0 ? (
             <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
@@ -231,8 +257,9 @@ export default function AlertasPage() {
               <div style={{ overflowX: 'auto', maxHeight: '600px', overflowY: 'auto' }}>
                 <table className="data-table">
                   <thead><tr>
-                    <th>Fecha medición</th><th>Sesión</th><th>Piscina</th><th>Parámetro</th>
-                    <th>Valor original</th><th>Valor corregido</th><th>Corregido por</th><th>Fecha corrección</th>
+                    <th>Fecha medición</th><th>Sesión</th><th>Piscina/Zona</th><th>Parámetro</th>
+                    <th>Valor original</th><th>Valor corregido</th>
+                    <th>Actuación realizada</th><th>Corregido por</th><th>Fecha corrección</th>
                   </tr></thead>
                   <tbody>
                     {alertRepairs.map(r => (
@@ -240,11 +267,16 @@ export default function AlertasPage() {
                         <td style={{ fontWeight: '500', whiteSpace: 'nowrap' }}>{r.parametroDate}</td>
                         <td>{r.parametroSession === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</td>
                         <td style={{ fontWeight: '600' }}>{r.pool ?? '—'}</td>
-                        <td>{PARAM_LABELS[r.parameterKey] ?? r.parameterKey}</td>
+                        <td style={{ fontSize: '12px' }}>{PARAM_LABELS[r.parameterKey] ?? r.parameterKey}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: '#dc2626', fontWeight: '600' }}>{r.oldValue?.toFixed(3) ?? '—'}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: '#15803d', fontWeight: '600' }}>{r.newValue?.toFixed(3) ?? '—'}</td>
+                        <td style={{ maxWidth: '220px', fontSize: '12px', color: r.notes ? '#0f1f3d' : '#94a3b8', fontStyle: r.notes ? 'normal' : 'italic' }}>
+                          {r.notes ?? 'Sin nota'}
+                        </td>
                         <td>{r.repairedBy}</td>
-                        <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '11px' }}>{new Date(r.repairedAt).toLocaleDateString('es-ES')} {new Date(r.repairedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '11px' }}>
+                          {new Date(r.repairedAt).toLocaleDateString('es-ES')} {new Date(r.repairedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -258,7 +290,7 @@ export default function AlertasPage() {
       {/* ── MODAL RESOLUCIÓN ── */}
       {resolveModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="card" style={{ padding: '28px', width: '100%', maxWidth: '500px' }}>
+          <div className="card" style={{ padding: '28px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#0f1f3d', marginBottom: '6px' }}>🔧 Resolver incidencia</h2>
             <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>{resolveModal.message}</p>
 
@@ -266,11 +298,13 @@ export default function AlertasPage() {
             {resolveModal.paramDate && (
               <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: '8px', marginBottom: '16px', fontSize: '12px' }}>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                  {resolveModal.pool && <span><strong>Piscina:</strong> {resolveModal.pool}</span>}
-                  {resolveModal.paramDate && <span><strong>Fecha medición:</strong> {resolveModal.paramDate}</span>}
-                  {resolveModal.paramSession && <span><strong>Sesión:</strong> {resolveModal.paramSession === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</span>}
+                  {resolveModal.pool && <span><strong>Piscina/Zona:</strong> {resolveModal.pool}</span>}
+                  <span><strong>Fecha medición:</strong> {resolveModal.paramDate}</span>
+                  <span><strong>Sesión:</strong> {resolveModal.paramSession === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</span>
                   {resolveModal.parameterKey && <span><strong>Parámetro:</strong> {PARAM_LABELS[resolveModal.parameterKey] ?? resolveModal.parameterKey}</span>}
-                  {resolveModal.currentValue !== undefined && <span><strong style={{ color: '#dc2626' }}>Valor anómalo:</strong> <span style={{ color: '#dc2626', fontWeight: '700' }}>{resolveModal.currentValue}</span></span>}
+                  {resolveModal.currentValue !== undefined && (
+                    <span><strong style={{ color: '#dc2626' }}>Valor anómalo:</strong> <span style={{ color: '#dc2626', fontWeight: '700' }}>{resolveModal.currentValue}</span></span>
+                  )}
                 </div>
               </div>
             )}
@@ -285,7 +319,7 @@ export default function AlertasPage() {
 
             {/* Opción de sobreescribir medición */}
             {hasRepairData && (
-              <div style={{ marginBottom: '20px', padding: '12px 14px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+              <div style={{ marginBottom: '16px', padding: '12px 14px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
                   <input type="checkbox" checked={saveRepair} onChange={e => setSaveRepair(e.target.checked)} style={{ marginTop: '2px', width: '16px', height: '16px', cursor: 'pointer' }} />
                   <div>
@@ -293,15 +327,31 @@ export default function AlertasPage() {
                       ✏️ Sobreescribir la medición original con el valor corregido
                     </span>
                     <span style={{ fontSize: '12px', color: '#3b82f6' }}>
-                      El registro de {resolveModal.paramDate} · {resolveModal.paramSession === 'morning' ? 'Mañana' : 'Tarde'} se actualizará con el nuevo valor. El valor original quedará guardado en el historial de reparaciones.
+                      El registro de {resolveModal.paramDate} · {resolveModal.paramSession === 'morning' ? 'Mañana' : 'Tarde'} se actualizará. El valor original quedará en el historial de reparaciones.
                     </span>
                   </div>
                 </label>
               </div>
             )}
 
+            {/* Nota de actuación */}
+            <div style={{ marginBottom: '22px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>
+                📝 Nota de actuación <span style={{ fontWeight: '400', color: '#94a3b8' }}>(opcional)</span>
+              </label>
+              <textarea
+                className="input-field"
+                rows={3}
+                value={actionNotes}
+                onChange={e => setActionNotes(e.target.value)}
+                placeholder="Describe la actuación realizada para resolver la incidencia (ej: Se ajustó el clorador automático, se comprobó el sensor de humedad, se renovó el agua...)"
+                style={{ resize: 'vertical', fontSize: '13px' }}
+              />
+              <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8' }}>Esta nota aparecerá en el historial y en el registro de reparaciones.</p>
+            </div>
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setResolveModal(null)} disabled={saving}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => { setResolveModal(null); setActionNotes(''); }} disabled={saving}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleResolve} disabled={!correctedValue.trim() || saving}>
                 {saving ? 'Guardando…' : '✅ Confirmar y guardar'}
               </button>
