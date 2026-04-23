@@ -65,12 +65,14 @@ function rowToContador(row: any): ContadorEntry {
   };
 }
 
+// ─── CAMBIO 1: rowToRecirculacion — añadido presionFiltros ───────────────────
 function rowToRecirculacion(row: any): RecirculacionEntry {
   return {
     id: row.id, date: row.date, pool: row.pool,
     contadorRecirculacion: row.contador_recirculacion,
     contadorDepuracion: row.contador_depuracion,
     horasFiltraje: row.horas_filtraje,
+    presionFiltros: row.presion_filtros ?? null,
   };
 }
 
@@ -269,8 +271,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await generateAlertsFromNewParam(rowToParam(row));
   };
 
+  // ─── CAMBIO 2: addRecirculacion — guarda presion_filtros ─────────────────────
   const addRecirculacion = async (e: Omit<RecirculacionEntry, 'id'>) => {
-    const row = { id: `r${Date.now()}`, date: e.date, pool: e.pool, contador_recirculacion: e.contadorRecirculacion, contador_depuracion: e.contadorDepuracion, horas_filtraje: e.horasFiltraje };
+    const row = {
+      id: `r${Date.now()}`, date: e.date, pool: e.pool,
+      contador_recirculacion: e.contadorRecirculacion,
+      contador_depuracion: e.contadorDepuracion,
+      horas_filtraje: e.horasFiltraje,
+      presion_filtros: e.presionFiltros ?? null,
+    };
     await supabase.from('recirculacion').insert(row);
     setRecirculacion(prev => [...prev, rowToRecirculacion(row)]);
   };
@@ -302,7 +311,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const col = colMap[paramKey];
     if (!col || !pool) return;
 
-    // Fetch current record
     const { data: rows } = await supabase.from('parametros').select('*').eq('date', date).eq('session', session);
     if (!rows || rows.length === 0) return;
 
@@ -310,8 +318,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const current = row[col] ?? {};
       const updated = { ...current, [pool]: newValue };
       await supabase.from('parametros').update({ [col]: updated }).eq('id', row.id);
-
-      // Update local state
       setParametros(prev => prev.map(p =>
         p.id === row.id
           ? { ...p, params: { ...p.params, [paramKey]: { ...(p.params as any)[paramKey], [pool]: newValue } } }
@@ -338,11 +344,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.from('alerts').update({ resolved: true, resolved_at: resolvedAt, resolved_value: newValue, resolved_by: resolvedBy }).eq('id', id);
 
     if (repair) {
-      // Update the actual measurement value
       if (repair.pool) {
         await updateParamValue(repair.date, repair.session, repair.pool, repair.paramKey, repair.correctedValue);
       }
-      // Save repair to history
       const repairRow = {
         id: `rp${Date.now()}`,
         alert_id: id, parametro_date: repair.date, parametro_session: repair.session,
@@ -361,9 +365,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // ─── CAMBIO 3: generateAlertsFromNewParam — alertas temp/humedad ambiente ────
   async function generateAlertsFromNewParam(rec: PoolParamRecord) {
     const newAlerts: any[] = [];
     let idx = Date.now();
+
+    // Calidad del agua por piscina
     for (const pool of activePools) {
       const cl = rec.params.cloroLibre[pool];
       if (cl !== null && cl !== undefined && (cl < THRESHOLDS.cloroLibre.min || cl > THRESHOLDS.cloroLibre.max)) {
@@ -389,10 +396,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
     }
+
+    // CO2 delta
     const { co2Interior, co2Exterior } = rec.params;
     if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
       newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)), threshold: `<=${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'co2Delta' });
     }
+
+    // Temperatura ambiente por zona (P. Grande, SPA, P. Pequeña)
+    const ambientChecks: Array<{ val: number | null | undefined; label: string }> = [
+      { val: rec.params.tempAmbienteGrande,  label: 'Temperatura ambiente P. Grande' },
+      { val: rec.params.tempAmbienteSpa,     label: 'Temperatura ambiente SPA' },
+      { val: rec.params.tempAmbientePequena, label: 'Temperatura ambiente P. Pequeña' },
+    ];
+    for (const { val, label } of ambientChecks) {
+      if (val !== null && val !== undefined && (val < THRESHOLDS.tempAmbiente.min || val > THRESHOLDS.tempAmbiente.max)) {
+        newAlerts.push({
+          id: `a${idx++}`, type: 'warning', section: 'piscinas',
+          message: `${label} fuera de rango (${val.toFixed(1)}°C)`,
+          value: String(val), threshold: `${THRESHOLDS.tempAmbiente.min}-${THRESHOLDS.tempAmbiente.max} °C`,
+          timestamp: rec.date, resolved: false,
+          param_date: rec.date, param_session: rec.session, parameter_key: 'tempAmbiente',
+        });
+      }
+    }
+
+    // Humedad relativa por zona
+    const humChecks: Array<{ val: number | null | undefined; label: string }> = [
+      { val: rec.params.humedadGrande,  label: 'Humedad relativa P. Grande' },
+      { val: rec.params.humedadSpa,     label: 'Humedad relativa SPA' },
+      { val: rec.params.humedadPequena, label: 'Humedad relativa P. Pequeña' },
+    ];
+    for (const { val, label } of humChecks) {
+      if (val !== null && val !== undefined && (val < THRESHOLDS.humedadRelativa.min || val > THRESHOLDS.humedadRelativa.max)) {
+        newAlerts.push({
+          id: `a${idx++}`, type: 'warning', section: 'piscinas',
+          message: `${label} fuera de rango (${val.toFixed(1)}%)`,
+          value: String(val), threshold: `${THRESHOLDS.humedadRelativa.min}-${THRESHOLDS.humedadRelativa.max} %`,
+          timestamp: rec.date, resolved: false,
+          param_date: rec.date, param_session: rec.session, parameter_key: 'humedadRelativa',
+        });
+      }
+    }
+
     if (newAlerts.length > 0) {
       await supabase.from('alerts').insert(newAlerts);
       setAlerts(prev => [...newAlerts.map(rowToAlert), ...prev]);
