@@ -18,6 +18,7 @@ export interface Alert {
   timestamp: string; resolved: boolean; resolvedAt?: string;
   resolvedValue?: number | string; resolvedBy?: string;
   paramDate?: string; paramSession?: string; parameterKey?: string;
+  notes?: string | null;
 }
 
 export interface AlertRepair {
