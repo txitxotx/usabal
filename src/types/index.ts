@@ -65,6 +65,7 @@ export interface RecirculacionEntry {
   contadorRecirculacion: number;
   contadorDepuracion: number;
   horasFiltraje: number;
+  presionFiltros?: number | null;   // bar — campo nuevo
 }
 
 export interface LegionellaTemp {
@@ -74,15 +75,11 @@ export interface LegionellaTemp {
 }
 
 export interface LegionellaBiocida {
-  id: string; date: string; biocida: number | null; ph: number | null;
+  id: string; date: string; biocida: number; ph: number;
   puntoDeMedida: string; nombre: string;
 }
 
 export interface IncendioCheck {
   id: string; date: string; tipo: string; zona: string;
-  resultado: 'OK' | 'FALLO' | 'PENDIENTE'; observaciones?: string; responsable: string;
-}
-
-export interface Threshold {
-  parameter: string; pool?: PoolName; min: number; max: number; unit: string;
+  resultado: string; observaciones?: string; responsable: string;
 }
