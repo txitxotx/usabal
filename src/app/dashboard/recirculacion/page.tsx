@@ -159,7 +159,7 @@ export default function RecirculacionPage() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Piscina *</label>
-                  <select className="input-field" value={form.pool} onChange={e => setForm(f => ({ ...f, pool: e.target.value }))}>
+                  <select className="input-field" value={form.pool} onChange={e => setForm(f => ({ ...f, pool: e.target.value as PoolName }))}>
                     {activePools.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
