@@ -7,29 +7,19 @@ const POOL_COLORS: Record<string, string> = {
   'P. Ext. Grande': '#0891b2', 'P. Ext. Pequeña': '#059669', 'Splash': '#d97706',
 };
 
-// Volumen de cada piscina en m³
 const POOL_VOLUME: Record<string, number> = {
-  'P. Grande':       881,
-  'P. Peq.-Med.':   110,
-  'SPA':             265,
-  'Pileta':            4,
-  'P. Ext. Grande':  641,
-  'P. Ext. Pequeña':  85,
-  'Splash':            5,
+  'P. Grande': 881, 'P. Peq.-Med.': 110, 'SPA': 265, 'Pileta': 4,
+  'P. Ext. Grande': 641, 'P. Ext. Pequeña': 85, 'Splash': 5,
 };
 
-// Umbrales variación diaria:
-//   Verde  (val-ok):      variación dentro del rango esperado
-//   Naranja (val-warning): supera el máximo (inusualmente alto)
-//   Rojo   (val-danger):  valor negativo (contador retrocedió → posible error)
 const DELTA_WARN: Record<string, { recircMax: number; renovadaMax: number; horasMax: number }> = {
-  'P. Grande':       { recircMax: 60000, renovadaMax: 2000,  horasMax: 26 },
-  'P. Peq.-Med.':   { recircMax: 50000, renovadaMax: 1500,  horasMax: 26 },
-  'SPA':             { recircMax: 20000, renovadaMax: 500,   horasMax: 25 },
-  'Pileta':          { recircMax: 5000,  renovadaMax: 300,   horasMax: 25 },
-  'P. Ext. Grande':  { recircMax: 60000, renovadaMax: 2000,  horasMax: 26 },
-  'P. Ext. Pequeña': { recircMax: 40000, renovadaMax: 1500,  horasMax: 26 },
-  'Splash':          { recircMax: 20000, renovadaMax: 500,   horasMax: 25 },
+  'P. Grande':       { recircMax: 60000, renovadaMax: 2000, horasMax: 26 },
+  'P. Peq.-Med.':   { recircMax: 50000, renovadaMax: 1500, horasMax: 26 },
+  'SPA':             { recircMax: 20000, renovadaMax: 500,  horasMax: 25 },
+  'Pileta':          { recircMax: 5000,  renovadaMax: 300,  horasMax: 25 },
+  'P. Ext. Grande':  { recircMax: 60000, renovadaMax: 2000, horasMax: 26 },
+  'P. Ext. Pequeña': { recircMax: 40000, renovadaMax: 1500, horasMax: 26 },
+  'Splash':          { recircMax: 20000, renovadaMax: 500,  horasMax: 25 },
 };
 
 function deltaClass(v: number | null, max: number) {
@@ -49,26 +39,37 @@ function fmtDelta(d: number | null) {
   return `${d >= 0 ? '+' : ''}${d.toLocaleString('es-ES')}`;
 }
 
-// Calcula tiempo de recirculación en horas: volumen_piscina / caudal_diario
-// caudal_diario = delta_recirculacion_m3 / horas_delta * 1  (en m³/h)
-// tiempo_recirc = volumen / caudal  (horas)
 function calcTiempoRecirc(volumen: number, deltaRecirc: number | null, deltaHoras: number | null): string {
   if (!deltaRecirc || !deltaHoras || deltaHoras <= 0 || deltaRecirc <= 0) return '—';
-  const caudalMh = deltaRecirc / deltaHoras; // m³/h
+  const caudalMh = deltaRecirc / deltaHoras;
   if (caudalMh <= 0) return '—';
   const horas = volumen / caudalMh;
   if (horas > 999) return '>999 h';
   return `${horas.toFixed(1)} h`;
 }
 
+const EMPTY_FORM = {
+  date: new Date().toISOString().split('T')[0],
+  pool: '',
+  contadorRecirculacion: '',
+  contadorDepuracion: '',
+  horasFiltraje: '',
+  presionFiltros: '',
+};
+
 export default function RecirculacionPage() {
-  const { hasPermission, recirculacion, activePools } = useApp();
+  const { hasPermission, recirculacion, activePools, addRecirculacion } = useApp();
   const [selectedPool, setSelectedPool] = useState<string>(activePools[0] ?? 'P. Grande');
   const [tab, setTab] = useState<'resumen' | 'tabla'>('resumen');
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState({ ...EMPTY_FORM, pool: activePools[0] ?? '' });
+  const [saving, setSaving] = useState(false);
 
   if (!hasPermission('view_recirculacion')) {
     return <div className="alert-banner alert-danger"><span>⛔</span> Sin permiso para ver esta sección.</div>;
   }
+
+  const canEdit = hasPermission('edit_recirculacion');
 
   const latestByPool: Record<string, typeof recirculacion[0]> = {};
   for (const e of recirculacion) {
@@ -94,14 +95,104 @@ export default function RecirculacionPage() {
   const warn = DELTA_WARN[selectedPool] ?? { recircMax: 99999, renovadaMax: 9999, horasMax: 26 };
   const vol  = POOL_VOLUME[selectedPool];
 
+  const handleSave = async () => {
+    if (!form.pool || !form.date || !form.contadorRecirculacion || !form.contadorDepuracion || !form.horasFiltraje) return;
+    setSaving(true);
+    try {
+      await addRecirculacion({
+        date: form.date,
+        pool: form.pool as any,
+        contadorRecirculacion: parseFloat(form.contadorRecirculacion),
+        contadorDepuracion: parseFloat(form.contadorDepuracion),
+        horasFiltraje: parseFloat(form.horasFiltraje),
+        presionFiltros: form.presionFiltros ? parseFloat(form.presionFiltros) : null,
+      });
+      setFormOpen(false);
+      setForm({ ...EMPTY_FORM, pool: activePools[0] ?? '' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field = (key: keyof typeof form, label: string, placeholder: string, type = 'number') => (
+    <div>
+      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>{label}</label>
+      <input
+        type={type}
+        step={type === 'number' ? '0.01' : undefined}
+        className="input-field"
+        placeholder={placeholder}
+        value={form[key]}
+        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+      />
+    </div>
+  );
+
   return (
     <div>
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#0f1f3d', margin: '0 0 4px' }}>🔄 Recirculación</h1>
           <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Contadores de recirculación, agua renovada, horas de filtraje y tiempo de recirculación</p>
         </div>
+        {canEdit && (
+          <button className="btn btn-primary" onClick={() => setFormOpen(true)}>+ Nueva lectura</button>
+        )}
       </div>
+
+      {/* ── MODAL FORMULARIO ── */}
+      {formOpen && canEdit && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ padding: '28px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#0f1f3d', margin: 0 }}>Nueva lectura de recirculación</h2>
+              <button onClick={() => setFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#94a3b8' }}>×</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Fecha + piscina */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha *</label>
+                  <input type="date" className="input-field" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Piscina *</label>
+                  <select className="input-field" value={form.pool} onChange={e => setForm(f => ({ ...f, pool: e.target.value }))}>
+                    {activePools.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {field('contadorRecirculacion', '🔄 Contador Recirculación (m³) *', 'ej: 125430')}
+              {field('contadorDepuracion', '💧 Contador Agua Renovada (m³) *', 'ej: 98200')}
+              {field('horasFiltraje', '⏱️ Horas de Filtraje *', 'ej: 16')}
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>🔵 Presión Filtros (bar)</label>
+                <input
+                  type="number" step="0.01" className="input-field" placeholder="ej: 1.2"
+                  value={form.presionFiltros}
+                  onChange={e => setForm(f => ({ ...f, presionFiltros: e.target.value }))}
+                />
+                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8' }}>Opcional</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setFormOpen(false)}>Cancelar</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSave}
+                disabled={saving || !form.pool || !form.date || !form.contadorRecirculacion || !form.contadorDepuracion || !form.horasFiltraje}
+              >
+                {saving ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tarjetas resumen por piscina */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '28px' }}>
@@ -145,6 +236,12 @@ export default function RecirculacionPage() {
                     </div>
                     {dH !== null && <div style={{ display: 'flex', justifyContent: 'flex-end' }}><span className={deltaClass(dH, pw.horasMax)} style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}>{fmtDelta(dH)} h/día</span></div>}
                   </div>
+                  {entry.presionFiltros != null && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>🔵 Presión filtros</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600', fontFamily: 'var(--font-mono)' }}>{entry.presionFiltros.toFixed(2)} bar</span>
+                    </div>
+                  )}
                   {tiempoRecirc !== '—' && (
                     <div style={{ marginTop: '4px', padding: '8px 10px', background: '#f0f9ff', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '11px', color: '#0077cc', fontWeight: '600' }}>🕐 Tiempo recirculación</span>
@@ -225,6 +322,20 @@ export default function RecirculacionPage() {
                 </div>
               );
             })}
+
+            {/* Presión filtros */}
+            {last.presionFiltros != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 16px', background: '#f0f9ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+                <span style={{ fontSize: '22px' }}>🔵</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: '0 0 2px', fontSize: '12px', color: '#0077cc', fontWeight: '600' }}>Presión Filtros</p>
+                </div>
+                <p style={{ margin: 0, fontSize: '22px', fontWeight: '700', fontFamily: 'var(--font-mono)', color: '#0077cc' }}>
+                  {last.presionFiltros.toFixed(2)} <span style={{ fontSize: '13px', fontWeight: '400', color: '#94a3b8' }}>bar</span>
+                </p>
+              </div>
+            )}
+
             {/* Tiempo recirculación */}
             {(() => {
               const d = withDeltas[0];
@@ -248,6 +359,12 @@ export default function RecirculacionPage() {
         </div>
       )}
 
+      {tab === 'resumen' && !last && (
+        <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
+          <p style={{ color: '#94a3b8' }}>No hay datos para {selectedPool}</p>
+        </div>
+      )}
+
       {/* Tabla histórico */}
       {tab === 'tabla' && (
         <div className="card" style={{ overflow: 'hidden' }}>
@@ -259,6 +376,7 @@ export default function RecirculacionPage() {
                   <th>Recirculación (m³)</th><th>Δ Recirc./día</th>
                   <th>Agua Renovada (m³)</th><th>Δ Renovada/día</th>
                   <th>Horas Filtraje</th><th>Δ Horas/día</th>
+                  <th>Presión Filtros (bar)</th>
                   <th>Tº Recirculación</th>
                 </tr>
               </thead>
@@ -272,6 +390,9 @@ export default function RecirculacionPage() {
                     <td className={deltaClass(e.deltaRenovada, warn.renovadaMax)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{fmtDelta(e.deltaRenovada)}</td>
                     <td style={{ fontFamily: 'var(--font-mono)' }}>{e.horasFiltraje}</td>
                     <td className={deltaClass(e.deltaHoras, warn.horasMax)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{fmtDelta(e.deltaHoras)}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: e.presionFiltros != null ? '#0077cc' : '#94a3b8', fontWeight: e.presionFiltros != null ? '600' : '400' }}>
+                      {e.presionFiltros != null ? `${e.presionFiltros.toFixed(2)}` : '—'}
+                    </td>
                     <td style={{ fontFamily: 'var(--font-mono)', color: '#0077cc', fontWeight: '600' }}>
                       {calcTiempoRecirc(vol, e.deltaRecirc, e.deltaHoras)}
                     </td>
