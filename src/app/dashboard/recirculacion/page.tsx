@@ -1,6 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
+import type { PoolName } from '@/types';
 
 const POOL_COLORS: Record<string, string> = {
   'P. Grande': '#0077cc', 'P. Peq.-Med.': '#0f6e56', 'SPA': '#7c3aed', 'Pileta': '#c2410c',
@@ -159,7 +160,7 @@ export default function RecirculacionPage() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Piscina *</label>
-                  <select className="input-field" value={form.pool} onChange={e => setForm(f => ({ ...f, pool: e.target.value as PoolName }))}>
+                  <select className="input-field" value={form.pool} onChange={e => setForm(f => ({ ...f, pool: e.target.value }))}>
                     {activePools.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
