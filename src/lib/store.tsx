@@ -65,7 +65,6 @@ function rowToContador(row: any): ContadorEntry {
   };
 }
 
-// ─── CAMBIO 1: rowToRecirculacion — añadido presionFiltros ───────────────────
 function rowToRecirculacion(row: any): RecirculacionEntry {
   return {
     id: row.id, date: row.date, pool: row.pool,
@@ -99,6 +98,7 @@ function rowToAlert(row: any): Alert {
     timestamp: row.timestamp, resolved: row.resolved,
     resolvedAt: row.resolved_at, resolvedValue: row.resolved_value, resolvedBy: row.resolved_by,
     paramDate: row.param_date, paramSession: row.param_session, parameterKey: row.parameter_key,
+    notes: row.notes ?? null,
   };
 }
 
@@ -107,7 +107,7 @@ function rowToAlertRepair(row: any): AlertRepair {
     id: row.id, alertId: row.alert_id, parametroDate: row.parametro_date,
     parametroSession: row.parametro_session, pool: row.pool, parameterKey: row.parameter_key,
     oldValue: row.old_value, newValue: row.new_value, repairedBy: row.repaired_by,
-    repairedAt: row.repaired_at, notes: row.notes,
+    repairedAt: row.repaired_at, notes: row.notes ?? null,
   };
 }
 
@@ -145,7 +145,8 @@ interface AppState {
   resolveAlert: (id: string, newValue: string, resolvedBy: string) => Promise<void>;
   resolveAlertWithRepair: (
     id: string, newValue: string, resolvedBy: string,
-    repair?: { date: string; session: string; pool?: string; paramKey: string; oldValue?: number; correctedValue: number }
+    repair?: { date: string; session: string; pool?: string; paramKey: string; oldValue?: number; correctedValue: number },
+    notes?: string,
   ) => Promise<void>;
   updateParamValue: (date: string, session: string, pool: string | null, paramKey: string, newValue: number) => Promise<void>;
   toggleSeasonalPool: (pool: PoolName) => Promise<void>;
@@ -271,7 +272,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await generateAlertsFromNewParam(rowToParam(row));
   };
 
-  // ─── CAMBIO 2: addRecirculacion — guarda presion_filtros ─────────────────────
   const addRecirculacion = async (e: Omit<RecirculacionEntry, 'id'>) => {
     const row = {
       id: `r${Date.now()}`, date: e.date, pool: e.pool,
@@ -302,27 +302,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIncendios(prev => [...prev, rowToIncendio(row)]);
   };
 
-  // ─── Update a specific parameter value in parametros (for repairing alerts) ──
+  // ─── updateParamValue — soporta campos de agua Y de ambiente ─────────────────
   const updateParamValue = async (date: string, session: string, pool: string | null, paramKey: string, newValue: number) => {
-    const colMap: Record<string, string> = {
+    // Campos de calidad del agua (JSON por piscina)
+    const poolColMap: Record<string, string> = {
       cloroLibre: 'cloro_libre', cloroCombinado: 'cloro_combinado',
       ph: 'ph', temperatura: 'temperatura', turbidez: 'turbidez',
     };
-    const col = colMap[paramKey];
-    if (!col || !pool) return;
+    // Campos de ambiente (escalares directos en la fila)
+    const ambientColMap: Record<string, string> = {
+      tempAmbiente:        'temp_ambiente',
+      tempAmbienteGrande:  'temp_ambiente_grande',
+      tempAmbienteSpa:     'temp_ambiente_spa',
+      tempAmbientePequena: 'temp_ambiente_pequena',
+      humedadRelativa:     'humedad_relativa',
+      humedadGrande:       'humedad_grande',
+      humedadSpa:          'humedad_spa',
+      humedadPequena:      'humedad_pequena',
+    };
 
     const { data: rows } = await supabase.from('parametros').select('*').eq('date', date).eq('session', session);
     if (!rows || rows.length === 0) return;
 
-    for (const row of rows) {
-      const current = row[col] ?? {};
-      const updated = { ...current, [pool]: newValue };
-      await supabase.from('parametros').update({ [col]: updated }).eq('id', row.id);
-      setParametros(prev => prev.map(p =>
-        p.id === row.id
-          ? { ...p, params: { ...p.params, [paramKey]: { ...(p.params as any)[paramKey], [pool]: newValue } } }
-          : p
-      ));
+    if (poolColMap[paramKey] && pool) {
+      // Parámetro de piscina: actualizar dentro del JSON
+      const col = poolColMap[paramKey];
+      for (const row of rows) {
+        const current = row[col] ?? {};
+        const updated = { ...current, [pool]: newValue };
+        await supabase.from('parametros').update({ [col]: updated }).eq('id', row.id);
+        setParametros(prev => prev.map(p =>
+          p.id === row.id
+            ? { ...p, params: { ...p.params, [paramKey]: { ...(p.params as any)[paramKey], [pool]: newValue } } }
+            : p
+        ));
+      }
+    } else if (ambientColMap[paramKey]) {
+      // Parámetro de ambiente: actualizar columna escalar directa
+      const col = ambientColMap[paramKey];
+      for (const row of rows) {
+        await supabase.from('parametros').update({ [col]: newValue }).eq('id', row.id);
+        setParametros(prev => prev.map(p =>
+          p.id === row.id
+            ? { ...p, params: { ...p.params, [paramKey]: newValue } }
+            : p
+        ));
+      }
+      // Si es tempAmbienteGrande/Spa/Pequena, actualizar también temp_ambiente (legacy)
+      if (['tempAmbienteGrande', 'tempAmbienteSpa', 'tempAmbientePequena'].includes(paramKey)) {
+        for (const row of rows) {
+          await supabase.from('parametros').update({ temp_ambiente: newValue }).eq('id', row.id);
+          setParametros(prev => prev.map(p =>
+            p.id === row.id ? { ...p, params: { ...p.params, tempAmbiente: newValue } } : p
+          ));
+        }
+      }
+      if (['humedadGrande', 'humedadSpa', 'humedadPequena'].includes(paramKey)) {
+        for (const row of rows) {
+          await supabase.from('parametros').update({ humedad_relativa: newValue }).eq('id', row.id);
+          setParametros(prev => prev.map(p =>
+            p.id === row.id ? { ...p, params: { ...p.params, humedadRelativa: newValue } } : p
+          ));
+        }
+      }
     }
   };
 
@@ -336,23 +378,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // ─── resolveAlertWithRepair — acepta notes ────────────────────────────────────
   const resolveAlertWithRepair = async (
     id: string, newValue: string, resolvedBy: string,
-    repair?: { date: string; session: string; pool?: string; paramKey: string; oldValue?: number; correctedValue: number }
+    repair?: { date: string; session: string; pool?: string; paramKey: string; oldValue?: number; correctedValue: number },
+    notes?: string,
   ) => {
     const resolvedAt = new Date().toISOString().split('T')[0];
-    await supabase.from('alerts').update({ resolved: true, resolved_at: resolvedAt, resolved_value: newValue, resolved_by: resolvedBy }).eq('id', id);
+    await supabase.from('alerts').update({
+      resolved: true, resolved_at: resolvedAt,
+      resolved_value: newValue, resolved_by: resolvedBy,
+      notes: notes ?? null,
+    }).eq('id', id);
 
     if (repair) {
-      if (repair.pool) {
-        await updateParamValue(repair.date, repair.session, repair.pool, repair.paramKey, repair.correctedValue);
-      }
+      await updateParamValue(repair.date, repair.session, repair.pool ?? null, repair.paramKey, repair.correctedValue);
+
       const repairRow = {
         id: `rp${Date.now()}`,
         alert_id: id, parametro_date: repair.date, parametro_session: repair.session,
         pool: repair.pool ?? null, parameter_key: repair.paramKey,
         old_value: repair.oldValue ?? null, new_value: repair.correctedValue,
         repaired_by: resolvedBy, repaired_at: new Date().toISOString(),
+        notes: notes ?? null,
       };
       await supabase.from('alert_repairs').insert(repairRow);
       setAlertRepairs(prev => [rowToAlertRepair(repairRow), ...prev]);
@@ -360,17 +408,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setAlerts(prev => {
       const alert = prev.find(a => a.id === id);
-      if (alert) { const resolved = { ...alert, resolved: true, resolvedAt, resolvedValue: newValue, resolvedBy }; setAlertHistory(h => [...h, resolved]); }
+      if (alert) {
+        const resolved = { ...alert, resolved: true, resolvedAt, resolvedValue: newValue, resolvedBy, notes: notes ?? undefined };
+        setAlertHistory(h => [...h, resolved]);
+      }
       return prev.filter(a => a.id !== id);
     });
   };
 
-  // ─── CAMBIO 3: generateAlertsFromNewParam — alertas temp/humedad ambiente ────
+  // ─── generateAlertsFromNewParam ───────────────────────────────────────────────
   async function generateAlertsFromNewParam(rec: PoolParamRecord) {
     const newAlerts: any[] = [];
     let idx = Date.now();
 
-    // Calidad del agua por piscina
     for (const pool of activePools) {
       const cl = rec.params.cloroLibre[pool];
       if (cl !== null && cl !== undefined && (cl < THRESHOLDS.cloroLibre.min || cl > THRESHOLDS.cloroLibre.max)) {
@@ -397,45 +447,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // CO2 delta
     const { co2Interior, co2Exterior } = rec.params;
     if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
       newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)), threshold: `<=${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'co2Delta' });
     }
 
-    // Temperatura ambiente por zona (P. Grande, SPA, P. Pequeña)
-    const ambientChecks: Array<{ val: number | null | undefined; label: string }> = [
-      { val: rec.params.tempAmbienteGrande,  label: 'Temperatura ambiente P. Grande' },
-      { val: rec.params.tempAmbienteSpa,     label: 'Temperatura ambiente SPA' },
-      { val: rec.params.tempAmbientePequena, label: 'Temperatura ambiente P. Pequeña' },
+    // Temperatura ambiente por zona
+    const ambientChecks: Array<{ val: number | null | undefined; label: string; key: string }> = [
+      { val: rec.params.tempAmbienteGrande,  label: 'Temperatura ambiente P. Grande',  key: 'tempAmbienteGrande' },
+      { val: rec.params.tempAmbienteSpa,     label: 'Temperatura ambiente SPA',        key: 'tempAmbienteSpa' },
+      { val: rec.params.tempAmbientePequena, label: 'Temperatura ambiente P. Pequeña', key: 'tempAmbientePequena' },
     ];
-    for (const { val, label } of ambientChecks) {
+    for (const { val, label, key } of ambientChecks) {
       if (val !== null && val !== undefined && (val < THRESHOLDS.tempAmbiente.min || val > THRESHOLDS.tempAmbiente.max)) {
-        newAlerts.push({
-          id: `a${idx++}`, type: 'warning', section: 'piscinas',
-          message: `${label} fuera de rango (${val.toFixed(1)}°C)`,
-          value: String(val), threshold: `${THRESHOLDS.tempAmbiente.min}-${THRESHOLDS.tempAmbiente.max} °C`,
-          timestamp: rec.date, resolved: false,
-          param_date: rec.date, param_session: rec.session, parameter_key: 'tempAmbiente',
-        });
+        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', message: `${label} fuera de rango (${val.toFixed(1)}°C)`, value: String(val), threshold: `${THRESHOLDS.tempAmbiente.min}-${THRESHOLDS.tempAmbiente.max} °C`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: key });
       }
     }
 
     // Humedad relativa por zona
-    const humChecks: Array<{ val: number | null | undefined; label: string }> = [
-      { val: rec.params.humedadGrande,  label: 'Humedad relativa P. Grande' },
-      { val: rec.params.humedadSpa,     label: 'Humedad relativa SPA' },
-      { val: rec.params.humedadPequena, label: 'Humedad relativa P. Pequeña' },
+    const humChecks: Array<{ val: number | null | undefined; label: string; key: string }> = [
+      { val: rec.params.humedadGrande,  label: 'Humedad relativa P. Grande',  key: 'humedadGrande' },
+      { val: rec.params.humedadSpa,     label: 'Humedad relativa SPA',        key: 'humedadSpa' },
+      { val: rec.params.humedadPequena, label: 'Humedad relativa P. Pequeña', key: 'humedadPequena' },
     ];
-    for (const { val, label } of humChecks) {
+    for (const { val, label, key } of humChecks) {
       if (val !== null && val !== undefined && (val < THRESHOLDS.humedadRelativa.min || val > THRESHOLDS.humedadRelativa.max)) {
-        newAlerts.push({
-          id: `a${idx++}`, type: 'warning', section: 'piscinas',
-          message: `${label} fuera de rango (${val.toFixed(1)}%)`,
-          value: String(val), threshold: `${THRESHOLDS.humedadRelativa.min}-${THRESHOLDS.humedadRelativa.max} %`,
-          timestamp: rec.date, resolved: false,
-          param_date: rec.date, param_session: rec.session, parameter_key: 'humedadRelativa',
-        });
+        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', message: `${label} fuera de rango (${val.toFixed(1)}%)`, value: String(val), threshold: `${THRESHOLDS.humedadRelativa.min}-${THRESHOLDS.humedadRelativa.max} %`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: key });
       }
     }
 
