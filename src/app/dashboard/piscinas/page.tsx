@@ -236,7 +236,7 @@ export default function PiscinasPage() {
     if (isNaN(val)) { setEditingCell(null); return; }
     await updateParamValue(editingCell.date, editingCell.session, editingCell.pool, editingCell.param, val);
     setEditingCell(null);
-    setCorrectedValue('');
+  };
   };
 
   // Form refs
