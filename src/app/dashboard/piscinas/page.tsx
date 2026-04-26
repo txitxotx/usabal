@@ -223,7 +223,6 @@ export default function PiscinasPage() {
   const [editCellValue, setEditCellValue] = useState('');
 
   const handleCellEdit = (date: string, session: string, pool: string, param: string, currentVal: number | null) => {
-    if (!isAdmin) return;
     setEditingCell({ date, session, pool, param });
     setEditCellValue(currentVal != null ? String(currentVal) : '');
   };
@@ -632,7 +631,7 @@ export default function PiscinasPage() {
                         <td
                           className={editing ? '' : cls}
                           style={{ fontFamily: 'var(--font-mono)', cursor: isAdmin ? 'pointer' : 'default', background: editing ? '#eff6ff' : undefined }}
-                          onClick={() => !editing && handleCellEdit(rec.date, rec.session, selectedPool, paramKey, rawVal ?? null)}
+                          onClick={() => !editing && currentUser?.role === 'admin' && handleCellEdit(rec.date, rec.session, selectedPool, paramKey, rawVal ?? null)}
                           title={isAdmin && !editing ? 'Clic para editar' : undefined}
                         >
                           {editing ? (
