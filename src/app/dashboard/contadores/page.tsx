@@ -1,5 +1,4 @@
 'use client';
-export const dynamic = 'force-dynamic';
 import { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import { useRouter } from 'next/navigation';
@@ -8,22 +7,12 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 export default function ContadoresPage() {
-  const { hasPermission, contadores, addContador } = useApp();
+  const { hasPermission, contadores, alerts } = useApp();
   const router = useRouter();
   const [selectedMonth, setSelectedMonth] = useState(0); // 0=all
   const [tab, setTab] = useState<'tabla' | 'graficos'>('graficos');
   const [formOpen, setFormOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  // Sin electricidadNormal ni electricidadPreferente
-  const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    accesos: '',
-    tempExterior: '',
-    aguaGeneralDiario: '',
-    gasDiario: '',
-    aguaPiscinasDiario: '',
-    kwTolargi: '',
-  });
+  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], accesos: '', tempExterior: '', aguaGeneralDiario: '', gasDiario: '', aguaPiscinasDiario: '', kwTolargi: '', electricidadNormal: '', electricidadPreferente: '' });
 
   if (!hasPermission('view_contadores')) {
     return <div className="alert-banner alert-danger"><span>⛔</span> No tienes permiso para ver esta sección.</div>;
@@ -35,11 +24,12 @@ export default function ContadoresPage() {
   }, [contadores, selectedMonth]);
 
   const chartData = filtered.map(e => ({
-    date: e.date.slice(5),
+    date: e.date.slice(5), // MM-DD
     agua: e.aguaGeneralDiario,
     gas: e.gasDiario,
     accesos: e.accesos,
     kw: e.kwTolargi,
+    elec: (e.electricidadNormal ?? 0) + (e.electricidadPreferente ?? 0),
   }));
 
   const totals = filtered.reduce((acc, e) => ({
@@ -63,37 +53,13 @@ export default function ContadoresPage() {
     );
   };
 
-  const handleSave = async () => {
-    if (!form.date) return;
-    setSaving(true);
-    try {
-      await addContador({
-        date: form.date,
-        accesos: form.accesos ? parseInt(form.accesos) : 0,
-        tempExterior: form.tempExterior ? parseFloat(form.tempExterior) : 0,
-        aguaGeneralDiario: form.aguaGeneralDiario ? parseFloat(form.aguaGeneralDiario) : 0,
-        gasDiario: form.gasDiario ? parseFloat(form.gasDiario) : 0,
-        aguaPiscinasDiario: form.aguaPiscinasDiario ? parseFloat(form.aguaPiscinasDiario) : 0,
-        kwTolargi: form.kwTolargi ? parseFloat(form.kwTolargi) : 0,
-        aguaGeneral: 0,
-        gas: 0,
-        aguaPiscinas: 0,
-        urBeroa: 0,
-      });
-      setFormOpen(false);
-      setForm({ date: new Date().toISOString().split('T')[0], accesos: '', tempExterior: '', aguaGeneralDiario: '', gasDiario: '', aguaPiscinasDiario: '', kwTolargi: '' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '20px', fontWeight: '700', color: '#0f1f3d', margin: '0 0 4px' }}>📊 Contadores</h1>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Consumos diarios de agua, gas, kW y accesos</p>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Consumos diarios de agua, gas, electricidad y accesos</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <select className="input-field" style={{ width: 'auto' }} value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}>
@@ -132,7 +98,7 @@ export default function ContadoresPage() {
 
       {tab === 'graficos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Accesos */}
+          {/* Accesos chart */}
           <div className="card" style={{ padding: '20px' }}>
             <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Accesos diarios</h3>
             <ResponsiveContainer width="100%" height={200}>
@@ -146,7 +112,7 @@ export default function ContadoresPage() {
             </ResponsiveContainer>
           </div>
 
-          {/* Agua & Gas */}
+          {/* Water & Gas */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="card" style={{ padding: '20px' }}>
               <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Agua diaria (m³)</h3>
@@ -203,6 +169,8 @@ export default function ContadoresPage() {
                   <th>Gas (m³)</th>
                   <th>Agua Piscinas (m³)</th>
                   <th>kW Tolargi</th>
+                  <th>Elec. Normal</th>
+                  <th>Elec. Prefer.</th>
                 </tr>
               </thead>
               <tbody>
@@ -215,6 +183,8 @@ export default function ContadoresPage() {
                     <td style={{ fontFamily: 'var(--font-mono)' }}>{e.gasDiario}</td>
                     <td style={{ fontFamily: 'var(--font-mono)' }}>{e.aguaPiscinasDiario}</td>
                     <td style={{ fontFamily: 'var(--font-mono)' }}>{e.kwTolargi}</td>
+                    <td>{e.electricidadNormal ?? '—'}</td>
+                    <td>{e.electricidadPreferente ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -223,7 +193,7 @@ export default function ContadoresPage() {
         </div>
       )}
 
-      {/* Modal formulario — sin campos de electricidad */}
+      {/* Add form modal */}
       {formOpen && canEdit && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="card" style={{ padding: '28px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -233,13 +203,15 @@ export default function ContadoresPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               {[
-                { key: 'date',               label: 'Fecha',                    type: 'date'   },
-                { key: 'accesos',            label: 'Accesos',                  type: 'number' },
-                { key: 'tempExterior',       label: 'Tª Exterior (°C)',         type: 'number' },
-                { key: 'aguaGeneralDiario',  label: 'Agua General (m³/día)',    type: 'number' },
-                { key: 'gasDiario',          label: 'Gas (m³/día)',             type: 'number' },
-                { key: 'aguaPiscinasDiario', label: 'Agua Piscinas (m³/día)',   type: 'number' },
-                { key: 'kwTolargi',          label: 'kW Tolargi',              type: 'number' },
+                { key: 'date', label: 'Fecha', type: 'date' },
+                { key: 'accesos', label: 'Accesos', type: 'number' },
+                { key: 'tempExterior', label: 'Tª Exterior (°C)', type: 'number' },
+                { key: 'aguaGeneralDiario', label: 'Agua General (m³/día)', type: 'number' },
+                { key: 'gasDiario', label: 'Gas (m³/día)', type: 'number' },
+                { key: 'aguaPiscinasDiario', label: 'Agua Piscinas (m³/día)', type: 'number' },
+                { key: 'kwTolargi', label: 'kW Tolargi', type: 'number' },
+                { key: 'electricidadNormal', label: 'Elec. Normal (kWh)', type: 'number' },
+                { key: 'electricidadPreferente', label: 'Elec. Preferente (kWh)', type: 'number' },
               ].map(f => (
                 <div key={f.key} style={{ gridColumn: f.key === 'date' ? '1 / -1' : undefined }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>{f.label}</label>
@@ -254,9 +226,7 @@ export default function ContadoresPage() {
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
               <button className="btn btn-secondary" onClick={() => setFormOpen(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-                {saving ? 'Guardando…' : 'Guardar'}
-              </button>
+              <button className="btn btn-primary" onClick={() => { alert('Registro guardado (demo)'); setFormOpen(false); }}>Guardar</button>
             </div>
           </div>
         </div>
