@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'supervisor' | 'operario' | 'readonly';
+export type UserRole = 'admin' | 'supervisor' | 'operario' | 'readonly' | 'sanidad';
 
 export type Permission =
   | 'view_piscinas' | 'view_recirculacion' | 'view_contadores'
@@ -66,7 +66,7 @@ export interface RecirculacionEntry {
   contadorRecirculacion: number;
   contadorDepuracion: number;
   horasFiltraje: number;
-  presionFiltros?: number | null;   // bar — campo nuevo
+  presionFiltros?: number | null;
 }
 
 export interface LegionellaTemp {
