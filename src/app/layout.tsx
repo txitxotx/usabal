@@ -17,33 +17,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!loading && !currentUser) router.replace('/login');
   }, [currentUser, router, loading]);
 
-  // Marcar montado y restaurar preferencia (solo cliente, después de hidratación)
   useEffect(() => {
     setMounted(true);
     try {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && window.localStorage) {
         const saved = window.localStorage.getItem('aquadash-dark');
         if (saved === '1') {
           document.body.classList.add('dark');
           setDark(true);
         }
       }
-    } catch (e) {
-      // Si localStorage no está disponible (SSR, modo privado, etc.), ignorar
-    }
+    } catch { /* ignorar */ }
   }, []);
 
   const toggleDark = () => {
     const next = !dark;
     setDark(next);
     try {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && window.localStorage) {
         document.body.classList.toggle('dark', next);
         window.localStorage.setItem('aquadash-dark', next ? '1' : '0');
       }
-    } catch (e) {
-      // ignorar
-    }
+    } catch { /* ignorar */ }
   };
 
   if (loading || !currentUser) return <LoadingWrapper />;
@@ -72,7 +67,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {unresolvedDanger} alerta{unresolvedDanger > 1 ? 's' : ''} crítica{unresolvedDanger > 1 ? 's' : ''}
             </button>
           )}
-          {/* Botón día / noche — solo se renderiza tras hidratación para evitar errores SSR */}
           {mounted && (
             <button
               onClick={toggleDark}
