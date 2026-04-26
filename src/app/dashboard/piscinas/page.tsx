@@ -217,11 +217,12 @@ export default function PiscinasPage() {
   const [pdfModal, setPdfModal] = useState(false);
   const [pdfPool, setPdfPool] = useState<PoolName | 'todas'>('todas');
   const [saving, setSaving] = useState(false);
-    const [editingCell, setEditingCell] = useState<{
+  // Edición inline de celdas (solo admin)
+  const [editingCell, setEditingCell] = useState<{
     date: string; session: string; pool: string; param: string;
   } | null>(null);
   const [editCellValue, setEditCellValue] = useState('');
- 
+
   const handleCellEdit = (
     date: string, session: string, pool: string, param: string, currentVal: number | null
   ) => {
@@ -229,7 +230,7 @@ export default function PiscinasPage() {
     setEditingCell({ date, session, pool, param });
     setEditCellValue(currentVal != null ? String(currentVal) : '');
   };
- 
+
   const handleCellSave = async () => {
     if (!editingCell) return;
     const val = parseFloat(editCellValue);
@@ -596,7 +597,7 @@ export default function PiscinasPage() {
       )}
 
       {/* ── TABLA: con selector de piscina ── */}
-           {tab === 'tabla' && (
+      {tab === 'tabla' && (
         <div>
           <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>Piscina:</label>
@@ -604,15 +605,14 @@ export default function PiscinasPage() {
               {visiblePools.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
- 
-          {/* Aviso edición para admin */}
+
           {isAdmin && (
             <div style={{ marginBottom: '10px', padding: '9px 14px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '12px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>✏️</span>
-              <span><strong>Modo admin:</strong> Haz clic en cualquier valor para corregirlo directamente. Pulsa Enter para guardar, Escape para cancelar.</span>
+              <span><strong>Modo admin:</strong> Haz clic en cualquier valor para corregirlo. Enter para guardar, Escape para cancelar.</span>
             </div>
           )}
- 
+
           <div className="card" style={{ overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto', maxHeight: '600px', overflowY: 'auto' }}>
               <table className="data-table">
@@ -626,8 +626,7 @@ export default function PiscinasPage() {
                 <tbody>
                   {[...filteredParametros].reverse().map(rec => {
                     const tr = getTempRange(selectedPool);
- 
-                    // Helper: renderiza una celda editable
+
                     const editableCell = (
                       paramKey: string,
                       rawVal: number | null | undefined,
@@ -639,7 +638,7 @@ export default function PiscinasPage() {
                         editingCell.session === rec.session &&
                         editingCell.pool === selectedPool &&
                         editingCell.param === paramKey;
- 
+
                       return (
                         <td
                           className={isEditing ? '' : cls}
@@ -682,41 +681,16 @@ export default function PiscinasPage() {
                         </td>
                       );
                     };
- 
+
                     return (
                       <tr key={rec.id}>
                         <td style={{ fontWeight: '500', whiteSpace: 'nowrap' }}>{rec.date}</td>
                         <td>{rec.session === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</td>
-                        {editableCell(
-                          'cloroLibre',
-                          rec.params.cloroLibre[selectedPool as PoolName],
-                          valueClassPool(rec.params.cloroLibre[selectedPool as PoolName], 'cloroLibre', selectedPool),
-                          2
-                        )}
-                        {editableCell(
-                          'cloroCombinado',
-                          rec.params.cloroCombinado[selectedPool as PoolName],
-                          valueClassPool(rec.params.cloroCombinado[selectedPool as PoolName], 'cloroCombinado', selectedPool),
-                          2
-                        )}
-                        {editableCell(
-                          'ph',
-                          rec.params.ph[selectedPool as PoolName],
-                          valueClassPool(rec.params.ph[selectedPool as PoolName], 'ph', selectedPool),
-                          2
-                        )}
-                        {editableCell(
-                          'temperatura',
-                          rec.params.temperatura[selectedPool as PoolName],
-                          valueClass(rec.params.temperatura[selectedPool as PoolName], tr.min, tr.max),
-                          1
-                        )}
-                        {editableCell(
-                          'turbidez',
-                          rec.params.turbidez[selectedPool as PoolName],
-                          valueClassPool(rec.params.turbidez[selectedPool as PoolName], 'turbidez', selectedPool),
-                          2
-                        )}
+                        {editableCell('cloroLibre', rec.params.cloroLibre[selectedPool as PoolName], valueClassPool(rec.params.cloroLibre[selectedPool as PoolName], 'cloroLibre', selectedPool), 2)}
+                        {editableCell('cloroCombinado', rec.params.cloroCombinado[selectedPool as PoolName], valueClassPool(rec.params.cloroCombinado[selectedPool as PoolName], 'cloroCombinado', selectedPool), 2)}
+                        {editableCell('ph', rec.params.ph[selectedPool as PoolName], valueClassPool(rec.params.ph[selectedPool as PoolName], 'ph', selectedPool), 2)}
+                        {editableCell('temperatura', rec.params.temperatura[selectedPool as PoolName], valueClass(rec.params.temperatura[selectedPool as PoolName], tr.min, tr.max), 1)}
+                        {editableCell('turbidez', rec.params.turbidez[selectedPool as PoolName], valueClassPool(rec.params.turbidez[selectedPool as PoolName], 'turbidez', selectedPool), 2)}
                       </tr>
                     );
                   })}
@@ -726,7 +700,6 @@ export default function PiscinasPage() {
           </div>
         </div>
       )}
- 
 
       {/* ── MODAL PDF ── */}
       {pdfModal && (
