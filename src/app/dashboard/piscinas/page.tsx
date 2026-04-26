@@ -237,7 +237,6 @@ export default function PiscinasPage() {
     await updateParamValue(editingCell.date, editingCell.session, editingCell.pool, editingCell.param, val);
     setEditingCell(null);
   };
-  };
 
   // Form refs
   const dateRef = useRef<HTMLInputElement>(null);
