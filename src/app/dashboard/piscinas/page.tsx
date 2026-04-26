@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 import { useState, useMemo, useRef } from 'react';
 import { useApp, THRESHOLDS, TEMP_AGUA_THRESHOLDS } from '@/lib/store';
 import { SEASONAL_POOLS, BASE_POOLS } from '@/types';
