@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 import { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
 import type { PoolName } from '@/types';
