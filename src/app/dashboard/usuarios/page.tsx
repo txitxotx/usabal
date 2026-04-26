@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import { useApp } from '@/lib/store';
 import type { User, Permission, UserRole } from '@/types';
