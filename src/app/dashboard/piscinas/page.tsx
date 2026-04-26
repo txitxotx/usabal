@@ -368,7 +368,7 @@ export default function PiscinasPage() {
           <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Control de calidad del agua · Mañana y tarde</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {isAdmin && <button className="btn btn-secondary" onClick={() => setPdfModal(true)}>📄 Exportar PDF oficial</button>}
+          {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && <button className="btn btn-secondary" onClick={() => setPdfModal(true)}>📄 Exportar PDF oficial</button>}
           {canEdit && <button className="btn btn-primary" onClick={() => setFormOpen(true)}>+ Nueva medición</button>}
         </div>
       </div>
