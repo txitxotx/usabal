@@ -208,7 +208,7 @@ tr:nth-child(even) td{background:#fafbfc}
 }
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function PiscinasPage() {
-  const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser } = useApp();
+  const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser, updateParamValue } = useApp();
   const [selectedPool, setSelectedPool] = useState<string>('P. Grande');
   const [selectedParam, setSelectedParam] = useState<string>('cloroLibre');
   const [tab, setTab] = useState<'resumen' | 'ambiente' | 'graficos' | 'tabla'>('resumen');
@@ -217,6 +217,27 @@ export default function PiscinasPage() {
   const [pdfModal, setPdfModal] = useState(false);
   const [pdfPool, setPdfPool] = useState<PoolName | 'todas'>('todas');
   const [saving, setSaving] = useState(false);
+    const [editingCell, setEditingCell] = useState<{
+    date: string; session: string; pool: string; param: string;
+  } | null>(null);
+  const [editCellValue, setEditCellValue] = useState('');
+ 
+  const handleCellEdit = (
+    date: string, session: string, pool: string, param: string, currentVal: number | null
+  ) => {
+    if (!isAdmin) return;
+    setEditingCell({ date, session, pool, param });
+    setEditCellValue(currentVal != null ? String(currentVal) : '');
+  };
+ 
+  const handleCellSave = async () => {
+    if (!editingCell) return;
+    const val = parseFloat(editCellValue);
+    if (isNaN(val)) { setEditingCell(null); return; }
+    await updateParamValue(editingCell.date, editingCell.session, editingCell.pool, editingCell.param, val);
+    setEditingCell(null);
+    setCorrectedValue('');
+  };
 
   // Form refs
   const dateRef = useRef<HTMLInputElement>(null);
@@ -576,14 +597,23 @@ export default function PiscinasPage() {
       )}
 
       {/* ── TABLA: con selector de piscina ── */}
-      {tab === 'tabla' && (
+           {tab === 'tabla' && (
         <div>
-          <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155' }}>Piscina:</label>
             <select className="input-field" style={{ width: 'auto' }} value={selectedPool} onChange={e => setSelectedPool(e.target.value)}>
               {visiblePools.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
+ 
+          {/* Aviso edición para admin */}
+          {isAdmin && (
+            <div style={{ marginBottom: '10px', padding: '9px 14px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '12px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>✏️</span>
+              <span><strong>Modo admin:</strong> Haz clic en cualquier valor para corregirlo directamente. Pulsa Enter para guardar, Escape para cancelar.</span>
+            </div>
+          )}
+ 
           <div className="card" style={{ overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto', maxHeight: '600px', overflowY: 'auto' }}>
               <table className="data-table">
@@ -597,15 +627,97 @@ export default function PiscinasPage() {
                 <tbody>
                   {[...filteredParametros].reverse().map(rec => {
                     const tr = getTempRange(selectedPool);
+ 
+                    // Helper: renderiza una celda editable
+                    const editableCell = (
+                      paramKey: string,
+                      rawVal: number | null | undefined,
+                      cls: string,
+                      decimals: number
+                    ) => {
+                      const isEditing =
+                        editingCell?.date === rec.date &&
+                        editingCell.session === rec.session &&
+                        editingCell.pool === selectedPool &&
+                        editingCell.param === paramKey;
+ 
+                      return (
+                        <td
+                          className={isEditing ? '' : cls}
+                          style={{
+                            fontFamily: 'var(--font-mono)',
+                            cursor: isAdmin ? 'pointer' : 'default',
+                            background: isEditing ? '#eff6ff' : undefined,
+                            padding: isEditing ? '4px 8px' : undefined,
+                          }}
+                          onClick={() => handleCellEdit(rec.date, rec.session, selectedPool, paramKey, rawVal ?? null)}
+                          title={isAdmin ? 'Clic para editar' : undefined}
+                        >
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              autoFocus
+                              value={editCellValue}
+                              onChange={e => setEditCellValue(e.target.value)}
+                              onBlur={handleCellSave}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') handleCellSave();
+                                if (e.key === 'Escape') setEditingCell(null);
+                              }}
+                              style={{
+                                width: '80px', padding: '3px 6px', fontSize: '12px',
+                                border: '1.5px solid #0057a8', borderRadius: '5px',
+                                fontFamily: 'var(--font-mono)', outline: 'none',
+                              }}
+                              onClick={e => e.stopPropagation()}
+                            />
+                          ) : (
+                            <>
+                              {rawVal != null ? rawVal.toFixed(decimals) : '—'}
+                              {isAdmin && rawVal != null && (
+                                <span style={{ marginLeft: '4px', fontSize: '9px', color: '#94a3b8', opacity: 0.7 }}>✏</span>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      );
+                    };
+ 
                     return (
                       <tr key={rec.id}>
                         <td style={{ fontWeight: '500', whiteSpace: 'nowrap' }}>{rec.date}</td>
                         <td>{rec.session === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</td>
-                        <td className={valueClassPool(rec.params.cloroLibre[selectedPool as PoolName], 'cloroLibre', selectedPool)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.cloroLibre[selectedPool as PoolName]?.toFixed(2) ?? '—'}</td>
-                        <td className={valueClassPool(rec.params.cloroCombinado[selectedPool as PoolName], 'cloroCombinado', selectedPool)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.cloroCombinado[selectedPool as PoolName]?.toFixed(2) ?? '—'}</td>
-                        <td className={valueClassPool(rec.params.ph[selectedPool as PoolName], 'ph', selectedPool)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.ph[selectedPool as PoolName]?.toFixed(2) ?? '—'}</td>
-                        <td className={valueClass(rec.params.temperatura[selectedPool as PoolName], tr.min, tr.max)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.temperatura[selectedPool as PoolName]?.toFixed(1) ?? '—'}</td>
-                        <td className={valueClassPool(rec.params.turbidez[selectedPool as PoolName], 'turbidez', selectedPool)} style={{ fontFamily: 'var(--font-mono)' }}>{rec.params.turbidez[selectedPool as PoolName]?.toFixed(2) ?? '—'}</td>
+                        {editableCell(
+                          'cloroLibre',
+                          rec.params.cloroLibre[selectedPool as PoolName],
+                          valueClassPool(rec.params.cloroLibre[selectedPool as PoolName], 'cloroLibre', selectedPool),
+                          2
+                        )}
+                        {editableCell(
+                          'cloroCombinado',
+                          rec.params.cloroCombinado[selectedPool as PoolName],
+                          valueClassPool(rec.params.cloroCombinado[selectedPool as PoolName], 'cloroCombinado', selectedPool),
+                          2
+                        )}
+                        {editableCell(
+                          'ph',
+                          rec.params.ph[selectedPool as PoolName],
+                          valueClassPool(rec.params.ph[selectedPool as PoolName], 'ph', selectedPool),
+                          2
+                        )}
+                        {editableCell(
+                          'temperatura',
+                          rec.params.temperatura[selectedPool as PoolName],
+                          valueClass(rec.params.temperatura[selectedPool as PoolName], tr.min, tr.max),
+                          1
+                        )}
+                        {editableCell(
+                          'turbidez',
+                          rec.params.turbidez[selectedPool as PoolName],
+                          valueClassPool(rec.params.turbidez[selectedPool as PoolName], 'turbidez', selectedPool),
+                          2
+                        )}
                       </tr>
                     );
                   })}
@@ -615,6 +727,7 @@ export default function PiscinasPage() {
           </div>
         </div>
       )}
+ 
 
       {/* ── MODAL PDF ── */}
       {pdfModal && (
