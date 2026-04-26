@@ -209,7 +209,7 @@ tr:nth-child(even) td{background:#fafbfc}
 }
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function PiscinasPage() {
-  const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser, updateParamValue } = useApp();
+  const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser, updateParamValue, updateParamSession } = useApp();
   const [selectedPool, setSelectedPool] = useState<string>('P. Grande');
   const [selectedParam, setSelectedParam] = useState<string>('cloroLibre');
   const [tab, setTab] = useState<'resumen' | 'ambiente' | 'graficos' | 'tabla'>('resumen');
@@ -220,6 +220,7 @@ export default function PiscinasPage() {
   const [saving, setSaving] = useState(false);
   // Edición inline (solo admin) — sin onBlur para no salir al hacer clic
   const [editingCell, setEditingCell] = useState<{ date: string; session: string; pool: string; param: string } | null>(null);
+  const [editingSession, setEditingSession] = useState<string | null>(null); // rec.id de la fila cuya sesión se edita
   const [editCellValue, setEditCellValue] = useState('');
 
   const handleCellEdit = (date: string, session: string, pool: string, param: string, currentVal: number | null) => {
@@ -657,7 +658,35 @@ export default function PiscinasPage() {
                     return (
                       <tr key={rec.id}>
                         <td style={{ fontWeight: '500', whiteSpace: 'nowrap' }}>{rec.date}</td>
-                        <td>{rec.session === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</td>
+                        <td
+                          style={{ cursor: currentUser?.role === 'admin' ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
+                          onClick={() => currentUser?.role === 'admin' && setEditingSession(rec.id)}
+                          title={currentUser?.role === 'admin' ? 'Clic para cambiar sesión' : undefined}
+                        >
+                          {editingSession === rec.id ? (
+                            <select
+                              autoFocus
+                              defaultValue={rec.session}
+                              onChange={async e => {
+                                const newSession = e.target.value as 'morning' | 'afternoon';
+                                if (newSession !== rec.session) {
+                                  await updateParamSession(rec.id, newSession);
+                                }
+                                setEditingSession(null);
+                              }}
+                              onBlur={() => setEditingSession(null)}
+                              style={{ fontSize: '12px', padding: '2px 4px', border: '2px solid #0057a8', borderRadius: '5px', outline: 'none' }}
+                            >
+                              <option value="morning">☀ Mañana</option>
+                              <option value="afternoon">🌆 Tarde</option>
+                            </select>
+                          ) : (
+                            <>
+                              {rec.session === 'morning' ? '☀ Mañana' : '🌆 Tarde'}
+                              {currentUser?.role === 'admin' && <span style={{ marginLeft: '3px', fontSize: '9px', color: '#bfdbfe' }}>✏</span>}
+                            </>
+                          )}
+                        </td>
                         {cell('cloroLibre',     rec.params.cloroLibre[selectedPool as PoolName],     valueClassPool(rec.params.cloroLibre[selectedPool as PoolName], 'cloroLibre', selectedPool),     2)}
                         {cell('cloroCombinado', rec.params.cloroCombinado[selectedPool as PoolName], valueClassPool(rec.params.cloroCombinado[selectedPool as PoolName], 'cloroCombinado', selectedPool), 2)}
                         {cell('ph',             rec.params.ph[selectedPool as PoolName],             valueClassPool(rec.params.ph[selectedPool as PoolName], 'ph', selectedPool),                       2)}
