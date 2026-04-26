@@ -10,26 +10,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dark, setDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const unresolvedDanger = alerts.filter(a => !a.resolved && a.type === 'danger').length;
 
   useEffect(() => {
     if (!loading && !currentUser) router.replace('/login');
   }, [currentUser, router, loading]);
 
-  // Restaurar preferencia dark mode
+  // Marcar montado y restaurar preferencia (solo cliente, después de hidratación)
   useEffect(() => {
-    const saved = localStorage.getItem('aquadash-dark');
-    if (saved === '1') {
-      document.body.classList.add('dark');
-      setDark(true);
+    setMounted(true);
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = window.localStorage.getItem('aquadash-dark');
+        if (saved === '1') {
+          document.body.classList.add('dark');
+          setDark(true);
+        }
+      }
+    } catch (e) {
+      // Si localStorage no está disponible (SSR, modo privado, etc.), ignorar
     }
   }, []);
 
   const toggleDark = () => {
     const next = !dark;
     setDark(next);
-    document.body.classList.toggle('dark', next);
-    localStorage.setItem('aquadash-dark', next ? '1' : '0');
+    try {
+      if (typeof window !== 'undefined') {
+        document.body.classList.toggle('dark', next);
+        window.localStorage.setItem('aquadash-dark', next ? '1' : '0');
+      }
+    } catch (e) {
+      // ignorar
+    }
   };
 
   if (loading || !currentUser) return <LoadingWrapper />;
@@ -58,27 +72,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {unresolvedDanger} alerta{unresolvedDanger > 1 ? 's' : ''} crítica{unresolvedDanger > 1 ? 's' : ''}
             </button>
           )}
-          {/* Botón día / noche */}
-          <button
-            onClick={toggleDark}
-            title={dark ? 'Cambiar a modo día' : 'Cambiar a modo noche'}
-            style={{
-              background: dark ? '#21262d' : '#f1f5f9',
-              border: `1px solid ${dark ? '#30363d' : '#e2eaf4'}`,
-              borderRadius: '20px',
-              padding: '5px 13px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: dark ? '#e2e8f0' : '#334155',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontWeight: '500',
-              transition: 'all 0.2s',
-            }}
-          >
-            {dark ? '☀️ Día' : '🌙 Noche'}
-          </button>
+          {/* Botón día / noche — solo se renderiza tras hidratación para evitar errores SSR */}
+          {mounted && (
+            <button
+              onClick={toggleDark}
+              title={dark ? 'Cambiar a modo día' : 'Cambiar a modo noche'}
+              style={{
+                background: dark ? '#21262d' : '#f1f5f9',
+                border: `1px solid ${dark ? '#30363d' : '#e2eaf4'}`,
+                borderRadius: '20px',
+                padding: '5px 13px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                color: dark ? '#e2e8f0' : '#334155',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+              }}
+            >
+              {dark ? '☀️ Día' : '🌙 Noche'}
+            </button>
+          )}
           <span style={{ fontSize: '12px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
             {new Date().toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
