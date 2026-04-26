@@ -5,32 +5,84 @@ import type { PoolName } from '@/types';
 import { useRouter } from 'next/navigation';
 
 const SECTION_CARDS = [
-  { label: 'Piscinas', icon: '🏊', path: '/dashboard/piscinas', perm: 'view_piscinas', color: '#0077cc', bg: '#e6f4ff', desc: 'Parámetros de calidad del agua' },
-  { label: 'Contadores', icon: '📊', path: '/dashboard/contadores', perm: 'view_contadores', color: '#0f6e56', bg: '#e1f5ee', desc: 'Consumos diarios: agua, gas, luz' },
-  { label: 'Legionella', icon: '🧫', path: '/dashboard/legionella', perm: 'view_legionella', color: '#7c3aed', bg: '#ede9fe', desc: 'Control ACS y biocida' },
-  { label: 'Incendios', icon: '🔥', path: '/dashboard/incendios', perm: 'view_incendios', color: '#c2410c', bg: '#fff7ed', desc: 'Revisiones y extintores' },
+  { label: 'Piscinas',    icon: '🏊', path: '/dashboard/piscinas',     perm: 'view_piscinas',     color: '#0077cc', bg: '#e6f4ff', desc: 'Parámetros de calidad del agua' },
+  { label: 'Contadores',  icon: '📊', path: '/dashboard/contadores',   perm: 'view_contadores',   color: '#0f6e56', bg: '#e1f5ee', desc: 'Consumos diarios: agua, gas, luz' },
+  { label: 'Legionella',  icon: '🧫', path: '/dashboard/legionella',   perm: 'view_legionella',   color: '#7c3aed', bg: '#ede9fe', desc: 'Control ACS y biocida' },
+  { label: 'Incendios',   icon: '🔥', path: '/dashboard/incendios',    perm: 'view_incendios',    color: '#c2410c', bg: '#fff7ed', desc: 'Revisiones y extintores' },
 ] as const;
 
 export default function DashboardHome() {
   const { currentUser, hasPermission, alerts, contadores, parametros, legionellaTemps } = useApp();
   const router = useRouter();
 
-  const unresolved = alerts.filter(a => !a.resolved);
-  const dangerCount = unresolved.filter(a => a.type === 'danger').length;
+  const unresolved   = alerts.filter(a => !a.resolved);
+  const dangerCount  = unresolved.filter(a => a.type === 'danger').length;
   const warningCount = unresolved.filter(a => a.type === 'warning').length;
 
-  // Last 7 entries
-  const last7 = contadores.slice(-7);
-  const avgAccesos = last7.length > 0 ? Math.round(last7.reduce((s, e) => s + (e.accesos || 0), 0) / last7.filter(e => e.accesos > 0).length) : 0;
-  const lastContador = contadores[contadores.length - 1];
-  const lastParam = parametros[parametros.length - 1];
-  const lastTemp = legionellaTemps[legionellaTemps.length - 1];
+  const last7         = contadores.slice(-7);
+  const avgAccesos    = last7.length > 0 ? Math.round(last7.reduce((s, e) => s + (e.accesos || 0), 0) / Math.max(last7.filter(e => e.accesos > 0).length, 1)) : 0;
+  const lastContador  = contadores[contadores.length - 1];
+  const lastParam     = parametros[parametros.length - 1];
+  const lastTemp      = legionellaTemps[legionellaTemps.length - 1];
 
-  // Check last param violations
-  const poolsWithIssues = lastParam ? Object.entries(lastParam.params.cloroLibre).filter(([, v]) => v !== null && (v < THRESHOLDS.cloroLibre.min || v > THRESHOLDS.cloroLibre.max)).map(([k]) => k) : [];
+  const poolsWithIssues = lastParam
+    ? Object.entries(lastParam.params.cloroLibre)
+        .filter(([, v]) => v !== null && (v < THRESHOLDS.cloroLibre.min || v > THRESHOLDS.cloroLibre.max))
+        .map(([k]) => k)
+    : [];
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
+
+  // KPI cards con color
+  const kpiCards = [
+    {
+      label: 'Accesos (media 7d)',
+      value: avgAccesos.toLocaleString('es-ES'),
+      sub: 'personas/día',
+      color: '#7c3aed', bg: '#ede9fe', icon: '👥',
+    },
+    {
+      label: 'Agua General Ayer',
+      value: lastContador?.aguaGeneralDiario != null ? String(lastContador.aguaGeneralDiario) : '—',
+      sub: 'm³/día',
+      color: '#0057a8', bg: '#e6f1fb', icon: '🚰',
+    },
+    {
+      label: 'Agua Piscinas Ayer',
+      value: lastContador?.aguaPiscinasDiario != null ? String(lastContador.aguaPiscinasDiario) : '—',
+      sub: 'm³/día',
+      color: '#0f6e56', bg: '#e1f5ee', icon: '🏊',
+    },
+    {
+      label: 'Gas Ayer',
+      value: lastContador?.gasDiario != null ? String(lastContador.gasDiario) : '—',
+      sub: 'm³/día',
+      color: '#b45309', bg: '#fffbeb', icon: '🔥',
+    },
+    {
+      label: 'kW Tolargi Ayer',
+      value: lastContador?.kwTolargi != null ? String(lastContador.kwTolargi) : '—',
+      sub: 'kWh',
+      color: '#c2410c', bg: '#fff7ed', icon: '⚡',
+    },
+    {
+      label: 'Temp. Retorno ACS',
+      value: lastTemp?.tempRetorno != null ? `${lastTemp.tempRetorno}°C` : '—',
+      sub: 'mínimo 50°C',
+      color: lastTemp && lastTemp.tempRetorno < 50 ? '#dc2626' : '#0891b2',
+      bg:    lastTemp && lastTemp.tempRetorno < 50 ? '#fef2f2' : '#e0f7fa',
+      icon: '🌡️',
+    },
+    {
+      label: 'Alertas activas',
+      value: String(dangerCount + warningCount),
+      sub: `${dangerCount} críticas · ${warningCount} avisos`,
+      color: dangerCount > 0 ? '#dc2626' : warningCount > 0 ? '#d97706' : '#15803d',
+      bg:    dangerCount > 0 ? '#fef2f2' : warningCount > 0 ? '#fffbeb' : '#f0fdf4',
+      icon: '🔔',
+    },
+  ];
 
   return (
     <div>
@@ -39,9 +91,7 @@ export default function DashboardHome() {
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f1f3d', margin: '0 0 4px' }}>
           {greeting}, {currentUser?.name.split(' ')[0]} 👋
         </h1>
-        <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-          Panel de control — actualizado hoy
-        </p>
+        <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Panel de control — actualizado hoy</p>
       </div>
 
       {/* Alert strip */}
@@ -56,37 +106,18 @@ export default function DashboardHome() {
         </div>
       )}
 
-      {/* KPI metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-        <div className="metric-card">
-          <div className="metric-label">Accesos (media 7d)</div>
-          <div className="metric-value">{avgAccesos.toLocaleString('es-ES')}</div>
-          <div className="metric-sub">personas/día</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-label">Agua General Ayer</div>
-          <div className="metric-value">{lastContador?.aguaGeneralDiario ?? '—'} <span style={{ fontSize: '14px', fontWeight: '400', color: '#94a3b8' }}>m³</span></div>
-          <div className="metric-sub">contador: {lastContador?.aguaGeneral.toLocaleString('es-ES')}</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-label">Gas Ayer</div>
-          <div className="metric-value">{lastContador?.gasDiario ?? '—'} <span style={{ fontSize: '14px', fontWeight: '400', color: '#94a3b8' }}>m³</span></div>
-          <div className="metric-sub">contador: {lastContador?.gas.toLocaleString('es-ES')}</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-label">Temp. Retorno ACS</div>
-          <div className="metric-value" style={{ color: lastTemp && lastTemp.tempRetorno < 50 ? '#dc2626' : '#0f1f3d' }}>
-            {lastTemp?.tempRetorno ?? '—'} <span style={{ fontSize: '14px', fontWeight: '400', color: '#94a3b8' }}>°C</span>
+      {/* KPI cards con color */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+        {kpiCards.map(k => (
+          <div key={k.label} style={{ background: k.bg, borderRadius: '12px', border: `1px solid ${k.color}30`, padding: '16px 18px', borderTop: `3px solid ${k.color}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '15px' }}>{k.icon}</span>
+              <span style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '0.04em', textTransform: 'uppercase', color: k.color }}>{k.label}</span>
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: k.color, lineHeight: 1.1 }}>{k.value}</div>
+            <div style={{ fontSize: '11px', color: k.color, opacity: 0.75, marginTop: '3px' }}>{k.sub}</div>
           </div>
-          <div className="metric-sub">mínimo 50°C (Legionella)</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-label">Alertas activas</div>
-          <div className="metric-value" style={{ color: dangerCount > 0 ? '#dc2626' : warningCount > 0 ? '#d97706' : '#15803d' }}>
-            {dangerCount + warningCount}
-          </div>
-          <div className="metric-sub">{dangerCount} críticas · {warningCount} avisos</div>
-        </div>
+        ))}
       </div>
 
       {/* Section cards */}
@@ -143,13 +174,13 @@ export default function DashboardHome() {
               </thead>
               <tbody>
                 {Object.keys(lastParam.params.cloroLibre).map(pool => {
-                  const cl = lastParam.params.cloroLibre[pool as PoolName];
-                  const cc = lastParam.params.cloroCombinado[pool as PoolName];
-                  const ph = lastParam.params.ph[pool as PoolName];
+                  const cl   = lastParam.params.cloroLibre[pool as PoolName];
+                  const cc   = lastParam.params.cloroCombinado[pool as PoolName];
+                  const ph   = lastParam.params.ph[pool as PoolName];
                   const temp = lastParam.params.temperatura[pool as PoolName];
-                  const clOk = cl === null || (cl >= 0.5 && cl <= 2.0);
-                  const ccOk = cc === null || cc <= 0.6;
-                  const phOk = ph === null || (ph >= 7.2 && ph <= 7.8);
+                  const clOk  = cl === null || (cl >= 0.5 && cl <= 2.0);
+                  const ccOk  = cc === null || cc <= 0.6;
+                  const phOk  = ph === null || (ph >= 7.2 && ph <= 7.8);
                   const allOk = clOk && ccOk && phOk;
                   const cls = (v: number | null, min: number, max: number) => {
                     if (v === null) return '';
@@ -163,11 +194,7 @@ export default function DashboardHome() {
                       <td className={cls(cc, 0, 0.6)}>{cc?.toFixed(2) ?? '—'}</td>
                       <td className={cls(ph, 7.2, 7.8)}>{ph?.toFixed(2) ?? '—'}</td>
                       <td>{temp?.toFixed(1) ?? '—'} °C</td>
-                      <td>
-                        <span className={`badge ${allOk ? 'badge-ok' : 'badge-danger'}`}>
-                          {allOk ? '✓ OK' : '✗ Revisar'}
-                        </span>
-                      </td>
+                      <td><span className={`badge ${allOk ? 'badge-ok' : 'badge-danger'}`}>{allOk ? '✓ OK' : '✗ Revisar'}</span></td>
                     </tr>
                   );
                 })}
