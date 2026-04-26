@@ -5,28 +5,43 @@ import { useApp } from '@/lib/store';
 import type { User, Permission, UserRole } from '@/types';
 
 const ALL_PERMISSIONS: { key: Permission; label: string; section: string }[] = [
-  { key: 'view_piscinas', label: 'Ver Piscinas', section: 'Piscinas' },
-  { key: 'edit_piscinas', label: 'Editar Piscinas', section: 'Piscinas' },
-  { key: 'view_contadores', label: 'Ver Contadores', section: 'Contadores' },
-  { key: 'edit_contadores', label: 'Editar Contadores', section: 'Contadores' },
-  { key: 'view_legionella', label: 'Ver Legionella', section: 'Legionella' },
-  { key: 'edit_legionella', label: 'Editar Legionella', section: 'Legionella' },
-  { key: 'view_incendios', label: 'Ver Incendios', section: 'Incendios' },
-  { key: 'edit_incendios', label: 'Editar Incendios', section: 'Incendios' },
-  { key: 'view_alerts', label: 'Ver Alertas', section: 'Sistema' },
-  { key: 'manage_users', label: 'Gestionar Usuarios', section: 'Sistema' },
-  { key: 'export_data', label: 'Exportar Datos', section: 'Sistema' },
+  { key: 'view_piscinas',      label: 'Ver Piscinas',         section: 'Piscinas' },
+  { key: 'edit_piscinas',      label: 'Editar Piscinas',      section: 'Piscinas' },
+  { key: 'view_contadores',    label: 'Ver Contadores',       section: 'Contadores' },
+  { key: 'edit_contadores',    label: 'Editar Contadores',    section: 'Contadores' },
+  { key: 'view_recirculacion', label: 'Ver Recirculación',    section: 'Recirculación' },
+  { key: 'edit_recirculacion', label: 'Editar Recirculación', section: 'Recirculación' },
+  { key: 'view_legionella',    label: 'Ver Legionella',       section: 'Legionella' },
+  { key: 'edit_legionella',    label: 'Editar Legionella',    section: 'Legionella' },
+  { key: 'view_incendios',     label: 'Ver Incendios',        section: 'Incendios' },
+  { key: 'edit_incendios',     label: 'Editar Incendios',     section: 'Incendios' },
+  { key: 'view_alerts',        label: 'Ver Alertas',          section: 'Sistema' },
+  { key: 'manage_users',       label: 'Gestionar Usuarios',   section: 'Sistema' },
+  { key: 'export_data',        label: 'Exportar Datos',       section: 'Sistema' },
 ];
 
 const ROLE_DEFAULTS: Record<UserRole, Permission[]> = {
-  admin: ALL_PERMISSIONS.map(p => p.key),
-  supervisor: ['view_piscinas','view_contadores','view_legionella','view_incendios','edit_piscinas','edit_contadores','edit_legionella','edit_incendios','view_alerts','export_data'],
-  operario: ['view_piscinas','view_contadores','view_legionella','view_incendios','edit_piscinas','edit_contadores','edit_legionella','edit_incendios'],
-  readonly: ['view_piscinas','view_contadores','view_legionella','view_incendios'],
+  admin:      ALL_PERMISSIONS.map(p => p.key),
+  supervisor: ['view_piscinas','edit_piscinas','view_contadores','edit_contadores','view_recirculacion','edit_recirculacion','view_legionella','edit_legionella','view_incendios','edit_incendios','view_alerts','export_data'],
+  operario:   ['view_piscinas','edit_piscinas','view_contadores','edit_contadores','view_recirculacion','edit_recirculacion','view_legionella','edit_legionella','view_incendios','edit_incendios'],
+  readonly:   ['view_piscinas','view_contadores','view_recirculacion','view_legionella','view_incendios'],
+  sanidad:    ['view_piscinas','view_legionella'],
 };
 
 const ROLE_COLORS: Record<UserRole, string> = {
-  admin: 'badge-danger', supervisor: 'badge-warning', operario: 'badge-info', readonly: 'badge-gray',
+  admin:      'badge-danger',
+  supervisor: 'badge-warning',
+  operario:   'badge-info',
+  readonly:   'badge-gray',
+  sanidad:    'badge-ok',
+};
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin:      'Admin',
+  supervisor: 'Supervisor',
+  operario:   'Operario',
+  readonly:   'Solo lectura',
+  sanidad:    'Sanidad',
 };
 
 export default function UsuariosPage() {
@@ -86,6 +101,16 @@ export default function UsuariosPage() {
     </div>
   );
 
+  const RoleSelect = ({ value, onChange }: { value: UserRole; onChange: (r: UserRole) => void }) => (
+    <select className="input-field" value={value} onChange={e => onChange(e.target.value as UserRole)}>
+      <option value="admin">Admin</option>
+      <option value="supervisor">Supervisor</option>
+      <option value="operario">Operario</option>
+      <option value="readonly">Solo lectura</option>
+      <option value="sanidad">Sanidad</option>
+    </select>
+  );
+
   return (
     <div>
       {/* Header */}
@@ -100,10 +125,10 @@ export default function UsuariosPage() {
       {/* Roles legend */}
       <div className="card" style={{ padding: '16px 20px', marginBottom: '20px' }}>
         <p style={{ margin: '0 0 10px', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Roles disponibles</p>
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           {(Object.keys(ROLE_DEFAULTS) as UserRole[]).map(role => (
             <div key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className={`badge ${ROLE_COLORS[role]}`} style={{ textTransform: 'capitalize' }}>{role}</span>
+              <span className={`badge ${ROLE_COLORS[role]}`}>{ROLE_LABELS[role]}</span>
               <span style={{ fontSize: '12px', color: '#64748b' }}>— {ROLE_DEFAULTS[role].length} permisos</span>
             </div>
           ))}
@@ -125,7 +150,7 @@ export default function UsuariosPage() {
                 </p>
                 <p style={{ margin: 0, fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>
               </div>
-              <span className={`badge ${ROLE_COLORS[user.role]}`} style={{ textTransform: 'capitalize', flex: 'none' }}>{user.role}</span>
+              <span className={`badge ${ROLE_COLORS[user.role] ?? 'badge-gray'}`} style={{ flex: 'none' }}>{ROLE_LABELS[user.role] ?? user.role}</span>
             </div>
 
             <div style={{ marginBottom: '12px' }}>
@@ -141,10 +166,7 @@ export default function UsuariosPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => updateUser({ ...user, active: !user.active })}
-              >
+              <button className="btn btn-secondary btn-sm" onClick={() => updateUser({ ...user, active: !user.active })}>
                 {user.active ? 'Desactivar' : 'Activar'}
               </button>
               <button className="btn btn-secondary btn-sm" onClick={() => setEditUser(user)}>Editar</button>
@@ -189,16 +211,11 @@ export default function UsuariosPage() {
                 <input className="input-field" type="email" value={editUser.email} onChange={e => setEditUser(p => p ? { ...p, email: e.target.value } : null)} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Rol (aplica permisos predefinidos)</label>
-                <select className="input-field" value={editUser.role} onChange={e => handleEditRoleChange(e.target.value as UserRole)}>
-                  <option value="admin">Admin</option>
-                  <option value="supervisor">Supervisor</option>
-                  <option value="operario">Operario</option>
-                  <option value="readonly">Solo lectura</option>
-                </select>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Rol</label>
+                <RoleSelect value={editUser.role} onChange={handleEditRoleChange} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Nueva contraseña (dejar vacío para no cambiar)</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Nueva contraseña (vacío = no cambiar)</label>
                 <input className="input-field" type="password" placeholder="••••••••" />
               </div>
             </div>
@@ -235,12 +252,7 @@ export default function UsuariosPage() {
               ))}
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Rol</label>
-                <select className="input-field" value={newForm.role} onChange={e => handleRoleChange(e.target.value as UserRole)}>
-                  <option value="admin">Admin</option>
-                  <option value="supervisor">Supervisor</option>
-                  <option value="operario">Operario</option>
-                  <option value="readonly">Solo lectura</option>
-                </select>
+                <RoleSelect value={newForm.role} onChange={handleRoleChange} />
               </div>
             </div>
             <div style={{ marginBottom: '20px' }}>
