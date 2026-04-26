@@ -149,6 +149,7 @@ interface AppState {
     notes?: string,
   ) => Promise<void>;
   updateParamValue: (date: string, session: string, pool: string | null, paramKey: string, newValue: number) => Promise<void>;
+  updateParamSession: (id: string, newSession: 'morning' | 'afternoon') => Promise<void>;
   toggleSeasonalPool: (pool: PoolName) => Promise<void>;
   generateAlertsFromData: () => Promise<void>;
 }
@@ -302,14 +303,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIncendios(prev => [...prev, rowToIncendio(row)]);
   };
 
-  // ─── updateParamValue — soporta campos de agua Y de ambiente ─────────────────
+  // ─── updateParamValue ─────────────────────────────────────────────────────────
   const updateParamValue = async (date: string, session: string, pool: string | null, paramKey: string, newValue: number) => {
-    // Campos de calidad del agua (JSON por piscina)
     const poolColMap: Record<string, string> = {
       cloroLibre: 'cloro_libre', cloroCombinado: 'cloro_combinado',
       ph: 'ph', temperatura: 'temperatura', turbidez: 'turbidez',
     };
-    // Campos de ambiente (escalares directos en la fila)
     const ambientColMap: Record<string, string> = {
       tempAmbiente:        'temp_ambiente',
       tempAmbienteGrande:  'temp_ambiente_grande',
@@ -325,7 +324,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!rows || rows.length === 0) return;
 
     if (poolColMap[paramKey] && pool) {
-      // Parámetro de piscina: actualizar dentro del JSON
       const col = poolColMap[paramKey];
       for (const row of rows) {
         const current = row[col] ?? {};
@@ -338,17 +336,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ));
       }
     } else if (ambientColMap[paramKey]) {
-      // Parámetro de ambiente: actualizar columna escalar directa
       const col = ambientColMap[paramKey];
       for (const row of rows) {
         await supabase.from('parametros').update({ [col]: newValue }).eq('id', row.id);
         setParametros(prev => prev.map(p =>
-          p.id === row.id
-            ? { ...p, params: { ...p.params, [paramKey]: newValue } }
-            : p
+          p.id === row.id ? { ...p, params: { ...p.params, [paramKey]: newValue } } : p
         ));
       }
-      // Si es tempAmbienteGrande/Spa/Pequena, actualizar también temp_ambiente (legacy)
       if (['tempAmbienteGrande', 'tempAmbienteSpa', 'tempAmbientePequena'].includes(paramKey)) {
         for (const row of rows) {
           await supabase.from('parametros').update({ temp_ambiente: newValue }).eq('id', row.id);
@@ -368,6 +362,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // ─── updateParamSession ───────────────────────────────────────────────────────
+  const updateParamSession = async (id: string, newSession: 'morning' | 'afternoon') => {
+    await supabase.from('parametros').update({ session: newSession }).eq('id', id);
+    setParametros(prev => prev.map(p => p.id === id ? { ...p, session: newSession } : p));
+  };
+
   const resolveAlert = async (id: string, newValue: string, resolvedBy: string) => {
     const resolvedAt = new Date().toISOString().split('T')[0];
     await supabase.from('alerts').update({ resolved: true, resolved_at: resolvedAt, resolved_value: newValue, resolved_by: resolvedBy }).eq('id', id);
@@ -378,7 +378,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // ─── resolveAlertWithRepair — acepta notes ────────────────────────────────────
   const resolveAlertWithRepair = async (
     id: string, newValue: string, resolvedBy: string,
     repair?: { date: string; session: string; pool?: string; paramKey: string; oldValue?: number; correctedValue: number },
@@ -393,7 +392,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (repair) {
       await updateParamValue(repair.date, repair.session, repair.pool ?? null, repair.paramKey, repair.correctedValue);
-
       const repairRow = {
         id: `rp${Date.now()}`,
         alert_id: id, parametro_date: repair.date, parametro_session: repair.session,
@@ -452,7 +450,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)), threshold: `<=${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'co2Delta' });
     }
 
-    // Temperatura ambiente por zona
     const ambientChecks: Array<{ val: number | null | undefined; label: string; key: string }> = [
       { val: rec.params.tempAmbienteGrande,  label: 'Temperatura ambiente P. Grande',  key: 'tempAmbienteGrande' },
       { val: rec.params.tempAmbienteSpa,     label: 'Temperatura ambiente SPA',        key: 'tempAmbienteSpa' },
@@ -464,7 +461,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Humedad relativa por zona
     const humChecks: Array<{ val: number | null | undefined; label: string; key: string }> = [
       { val: rec.params.humedadGrande,  label: 'Humedad relativa P. Grande',  key: 'humedadGrande' },
       { val: rec.params.humedadSpa,     label: 'Humedad relativa SPA',        key: 'humedadSpa' },
@@ -497,7 +493,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       legionellaTemps, legionellaBiocida, incendios, alerts, alertHistory, alertRepairs, activePools,
       login, logout, hasPermission, updateUser, addUser, deleteUser,
       addContador, addPoolParam, addRecirculacion, addLegionellaTemp, addLegionellaBiocida, addIncendio,
-      resolveAlert, resolveAlertWithRepair, updateParamValue, toggleSeasonalPool, generateAlertsFromData,
+      resolveAlert, resolveAlertWithRepair, updateParamValue, updateParamSession,
+      toggleSeasonalPool, generateAlertsFromData,
     }}>
       {children}
     </AppContext.Provider>
