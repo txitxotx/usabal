@@ -185,3 +185,61 @@ body {
 .val-ok { color: #15803d; font-weight: 500; }
 .val-warning { color: #d97706; font-weight: 600; }
 .val-danger { color: #dc2626; font-weight: 700; }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────── */
+body.dark {
+  background: #0d1117;
+  color: #e2e8f0;
+}
+body.dark .card {
+  background: #161b22;
+  border-color: #30363d;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+body.dark .metric-card {
+  background: #161b22;
+  border-color: #30363d;
+}
+body.dark .metric-label { color: #6e7681; }
+body.dark .metric-value { color: #e2e8f0; }
+body.dark .metric-sub { color: #8b949e; }
+body.dark .data-table th {
+  background: #1c2128;
+  color: #8b949e;
+  border-color: #30363d;
+}
+body.dark .data-table td {
+  color: #c9d1d9;
+  border-color: #21262d;
+}
+body.dark .data-table tr:hover td { background: #1c2128; }
+body.dark .data-table tr:last-child td { border-bottom: none; }
+body.dark .input-field {
+  background: #1c2128;
+  border-color: #30363d;
+  color: #e2e8f0;
+}
+body.dark .input-field:focus { border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88,166,255,0.15); }
+body.dark .btn-secondary {
+  background: #21262d;
+  color: #c9d1d9;
+  border-color: #30363d;
+}
+body.dark .btn-secondary:hover { background: #30363d; }
+body.dark .sidebar-link { color: #8b949e; }
+body.dark .sidebar-link:hover { background: #21262d; color: #58a6ff; }
+body.dark .sidebar-link.active { background: #1f3358; color: #58a6ff; }
+body.dark .alert-danger  { background: #3d1515; border-color: #8b1a1a; color: #fca5a5; }
+body.dark .alert-warning { background: #3d2e00; border-color: #b45309; color: #fcd34d; }
+body.dark .alert-info    { background: #1a2d4d; border-color: #1e40af; color: #93c5fd; }
+body.dark .badge-ok      { background: #1a3a2a; color: #4ade80; }
+body.dark .badge-danger  { background: #3d1515; color: #fca5a5; }
+body.dark .badge-warning { background: #3d2e00; color: #fcd34d; }
+body.dark .badge-info    { background: #1a2d4d; color: #93c5fd; }
+body.dark .badge-gray    { background: #21262d; color: #8b949e; }
+body.dark header { background: #161b22 !important; border-color: #30363d !important; }
+body.dark aside  { background: #161b22 !important; border-color: #30363d !important; }
+body.dark select.input-field option { background: #1c2128; }
+body.dark h1, body.dark h2, body.dark h3 { color: #e2e8f0; }
+body.dark p { color: #8b949e; }
+body.dark strong { color: #c9d1d9; }
