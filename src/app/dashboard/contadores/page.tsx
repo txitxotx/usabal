@@ -2,54 +2,51 @@
 export const dynamic = 'force-dynamic';
 import { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
-import { useRouter } from 'next/navigation';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 
-const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 export default function ContadoresPage() {
   const { hasPermission, contadores, addContador } = useApp();
-  const router = useRouter();
-  const [selectedMonth, setSelectedMonth] = useState(0); // 0=all
-  const [tab, setTab] = useState<'tabla' | 'graficos'>('graficos');
+  const [selectedMonth, setSelectedMonth] = useState(0);
+  const [tab, setTab] = useState<'graficos' | 'tabla'>('graficos');
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Sin electricidadNormal ni electricidadPreferente
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
-    accesos: '',
-    tempExterior: '',
-    aguaGeneralDiario: '',
-    gasDiario: '',
-    aguaPiscinasDiario: '',
-    kwTolargi: '',
+    accesos: '', tempExterior: '',
+    aguaGeneralDiario: '', gasDiario: '', aguaPiscinasDiario: '', kwTolargi: '',
   });
 
   if (!hasPermission('view_contadores')) {
     return <div className="alert-banner alert-danger"><span>⛔</span> No tienes permiso para ver esta sección.</div>;
   }
 
+  const canEdit = hasPermission('edit_contadores');
+
   const filtered = useMemo(() => {
     if (!selectedMonth) return contadores;
     return contadores.filter(e => new Date(e.date).getMonth() + 1 === selectedMonth);
   }, [contadores, selectedMonth]);
 
+  const totals = filtered.reduce((acc, e) => ({
+    aguaGeneral:   acc.aguaGeneral   + (e.aguaGeneralDiario   || 0),
+    aguaPiscinas:  acc.aguaPiscinas  + (e.aguaPiscinasDiario  || 0),
+    gas:           acc.gas           + (e.gasDiario           || 0),
+    accesos:       acc.accesos       + (e.accesos             || 0),
+    kw:            acc.kw            + (e.kwTolargi           || 0),
+  }), { aguaGeneral: 0, aguaPiscinas: 0, gas: 0, accesos: 0, kw: 0 });
+
+  const aguaTotal = totals.aguaGeneral + totals.aguaPiscinas;
+
   const chartData = filtered.map(e => ({
     date: e.date.slice(5),
     agua: e.aguaGeneralDiario,
+    piscinas: e.aguaPiscinasDiario,
     gas: e.gasDiario,
     accesos: e.accesos,
     kw: e.kwTolargi,
   }));
-
-  const totals = filtered.reduce((acc, e) => ({
-    agua: acc.agua + (e.aguaGeneralDiario || 0),
-    gas: acc.gas + (e.gasDiario || 0),
-    accesos: acc.accesos + (e.accesos || 0),
-    kw: acc.kw + (e.kwTolargi || 0),
-  }), { agua: 0, gas: 0, accesos: 0, kw: 0 });
-
-  const canEdit = hasPermission('edit_contadores');
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -69,16 +66,16 @@ export default function ContadoresPage() {
     try {
       await addContador({
         date: form.date,
-        accesos: form.accesos ? parseInt(form.accesos) : 0,
-        tempExterior: form.tempExterior ? parseFloat(form.tempExterior) : 0,
-        aguaGeneralDiario: form.aguaGeneralDiario ? parseFloat(form.aguaGeneralDiario) : 0,
-        gasDiario: form.gasDiario ? parseFloat(form.gasDiario) : 0,
-        aguaPiscinasDiario: form.aguaPiscinasDiario ? parseFloat(form.aguaPiscinasDiario) : 0,
-        kwTolargi: form.kwTolargi ? parseFloat(form.kwTolargi) : 0,
-        aguaGeneral: 0,
-        gas: 0,
-        aguaPiscinas: 0,
-        urBeroa: 0,
+        accesos:            form.accesos           ? parseInt(form.accesos)               : 0,
+        tempExterior:       form.tempExterior       ? parseFloat(form.tempExterior)        : 0,
+        aguaGeneral:        0,
+        aguaGeneralDiario:  form.aguaGeneralDiario  ? parseFloat(form.aguaGeneralDiario)   : 0,
+        gas:                0,
+        gasDiario:          form.gasDiario          ? parseFloat(form.gasDiario)           : 0,
+        aguaPiscinas:       0,
+        aguaPiscinasDiario: form.aguaPiscinasDiario ? parseFloat(form.aguaPiscinasDiario)  : 0,
+        kwTolargi:          form.kwTolargi          ? parseFloat(form.kwTolargi)           : 0,
+        urBeroa:            0,
       });
       setFormOpen(false);
       setForm({ date: new Date().toISOString().split('T')[0], accesos: '', tempExterior: '', aguaGeneralDiario: '', gasDiario: '', aguaPiscinasDiario: '', kwTolargi: '' });
@@ -86,6 +83,16 @@ export default function ContadoresPage() {
       setSaving(false);
     }
   };
+
+  const kpiCards = [
+    { label: 'Agua Total',       value: aguaTotal.toLocaleString('es-ES'),           unit: 'm³',      sub: 'General + Piscinas',     color: '#0057a8', bg: '#e6f1fb', icon: '💧' },
+    { label: 'Agua General',     value: totals.aguaGeneral.toLocaleString('es-ES'),  unit: 'm³',      sub: 'Consumo red general',    color: '#0891b2', bg: '#e0f7fa', icon: '🚰' },
+    { label: 'Agua Piscinas',    value: totals.aguaPiscinas.toLocaleString('es-ES'), unit: 'm³',      sub: 'Consumo piscinas',       color: '#0f6e56', bg: '#e1f5ee', icon: '🏊' },
+    { label: 'Gas Total',        value: totals.gas.toLocaleString('es-ES'),          unit: 'm³',      sub: 'Gas natural',            color: '#b45309', bg: '#fffbeb', icon: '🔥' },
+    { label: 'Accesos Total',    value: totals.accesos.toLocaleString('es-ES'),      unit: 'personas',sub: 'Entradas registradas',   color: '#7c3aed', bg: '#ede9fe', icon: '👥' },
+    { label: 'kW Tolargi',       value: totals.kw.toLocaleString('es-ES'),           unit: 'kWh',     sub: 'Consumo eléctrico',      color: '#c2410c', bg: '#fff7ed', icon: '⚡' },
+    { label: 'Días registrados', value: String(filtered.length),                     unit: 'días',    sub: 'Registros en período',   color: '#334155', bg: '#f8fafc', icon: '📅' },
+  ];
 
   return (
     <div>
@@ -104,19 +111,16 @@ export default function ContadoresPage() {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        {[
-          { label: 'Agua Total', value: totals.agua.toLocaleString('es-ES'), unit: 'm³' },
-          { label: 'Gas Total', value: totals.gas.toLocaleString('es-ES'), unit: 'm³' },
-          { label: 'Accesos Total', value: totals.accesos.toLocaleString('es-ES'), unit: 'personas' },
-          { label: 'kW Tolargi Total', value: totals.kw.toLocaleString('es-ES'), unit: 'kWh' },
-          { label: 'Días registrados', value: filtered.length, unit: 'días' },
-        ].map(m => (
-          <div key={m.label} className="metric-card">
-            <div className="metric-label">{m.label}</div>
-            <div className="metric-value" style={{ fontSize: '20px' }}>{m.value}</div>
-            <div className="metric-sub">{m.unit}</div>
+      {/* KPIs con color */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+        {kpiCards.map(k => (
+          <div key={k.label} style={{ background: k.bg, borderRadius: '12px', border: `1px solid ${k.color}30`, padding: '16px 18px', borderTop: `3px solid ${k.color}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '15px' }}>{k.icon}</span>
+              <span style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '0.04em', textTransform: 'uppercase', color: k.color }}>{k.label}</span>
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: k.color, lineHeight: 1.1 }}>{k.value}</div>
+            <div style={{ fontSize: '11px', color: k.color, opacity: 0.75, marginTop: '3px' }}>{k.unit} · {k.sub}</div>
           </div>
         ))}
       </div>
@@ -132,7 +136,6 @@ export default function ContadoresPage() {
 
       {tab === 'graficos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Accesos */}
           <div className="card" style={{ padding: '20px' }}>
             <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Accesos diarios</h3>
             <ResponsiveContainer width="100%" height={200}>
@@ -141,12 +144,11 @@ export default function ContadoresPage() {
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={50} tickFormatter={v => v.toLocaleString()} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="accesos" fill="#0077cc" radius={[3, 3, 0, 0]} name="Accesos" />
+                <Bar dataKey="accesos" fill="#7c3aed" radius={[3, 3, 0, 0]} name="Accesos" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Agua & Gas */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="card" style={{ padding: '20px' }}>
               <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Agua diaria (m³)</h3>
@@ -156,7 +158,8 @@ export default function ContadoresPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={40} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="agua" stroke="#0077cc" dot={false} strokeWidth={2} name="Agua m³" />
+                  <Line type="monotone" dataKey="agua"     stroke="#0057a8" dot={false} strokeWidth={2} name="Agua General m³" />
+                  <Line type="monotone" dataKey="piscinas" stroke="#0f6e56" dot={false} strokeWidth={2} name="Agua Piscinas m³" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -168,13 +171,12 @@ export default function ContadoresPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={40} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="gas" stroke="#f59e0b" dot={false} strokeWidth={2} name="Gas m³" />
+                  <Line type="monotone" dataKey="gas" stroke="#b45309" dot={false} strokeWidth={2} name="Gas m³" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* kW */}
           <div className="card" style={{ padding: '20px' }}>
             <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>kW Tolargi diarios</h3>
             <ResponsiveContainer width="100%" height={180}>
@@ -183,7 +185,7 @@ export default function ContadoresPage() {
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={50} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="kw" stroke="#7c3aed" dot={false} strokeWidth={2} name="kWh" />
+                <Line type="monotone" dataKey="kw" stroke="#c2410c" dot={false} strokeWidth={2} name="kWh" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -208,13 +210,13 @@ export default function ContadoresPage() {
               <tbody>
                 {[...filtered].reverse().map(e => (
                   <tr key={e.id}>
-                    <td style={{ fontWeight: '500', whiteSpace: 'nowrap' }}>{e.date}</td>
+                    <td>{e.date}</td>
                     <td>{e.accesos?.toLocaleString('es-ES') ?? '—'}</td>
                     <td>{e.tempExterior} °C</td>
-                    <td style={{ fontFamily: 'var(--font-mono)' }}>{e.aguaGeneralDiario}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)' }}>{e.gasDiario}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)' }}>{e.aguaPiscinasDiario}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)' }}>{e.kwTolargi}</td>
+                    <td>{e.aguaGeneralDiario ?? '—'}</td>
+                    <td>{e.gasDiario ?? '—'}</td>
+                    <td>{e.aguaPiscinasDiario ?? '—'}</td>
+                    <td>{e.kwTolargi ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -223,32 +225,27 @@ export default function ContadoresPage() {
         </div>
       )}
 
-      {/* Modal formulario — sin campos de electricidad */}
+      {/* Modal */}
       {formOpen && canEdit && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="card" style={{ padding: '28px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="card" style={{ padding: '28px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#0f1f3d', margin: 0 }}>Nuevo registro de contadores</h2>
               <button onClick={() => setFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#94a3b8' }}>×</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               {[
-                { key: 'date',               label: 'Fecha',                    type: 'date'   },
-                { key: 'accesos',            label: 'Accesos',                  type: 'number' },
-                { key: 'tempExterior',       label: 'Tª Exterior (°C)',         type: 'number' },
-                { key: 'aguaGeneralDiario',  label: 'Agua General (m³/día)',    type: 'number' },
-                { key: 'gasDiario',          label: 'Gas (m³/día)',             type: 'number' },
-                { key: 'aguaPiscinasDiario', label: 'Agua Piscinas (m³/día)',   type: 'number' },
-                { key: 'kwTolargi',          label: 'kW Tolargi',              type: 'number' },
+                { key: 'date',               label: 'Fecha',                   type: 'date'   },
+                { key: 'accesos',            label: 'Accesos',                 type: 'number' },
+                { key: 'tempExterior',       label: 'Tª Exterior (°C)',        type: 'number' },
+                { key: 'aguaGeneralDiario',  label: 'Agua General (m³/día)',   type: 'number' },
+                { key: 'gasDiario',          label: 'Gas (m³/día)',            type: 'number' },
+                { key: 'aguaPiscinasDiario', label: 'Agua Piscinas (m³/día)', type: 'number' },
+                { key: 'kwTolargi',          label: 'kW Tolargi',             type: 'number' },
               ].map(f => (
                 <div key={f.key} style={{ gridColumn: f.key === 'date' ? '1 / -1' : undefined }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>{f.label}</label>
-                  <input
-                    className="input-field"
-                    type={f.type}
-                    value={(form as any)[f.key]}
-                    onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                  />
+                  <input className="input-field" type={f.type} value={(form as any)[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
                 </div>
               ))}
             </div>
