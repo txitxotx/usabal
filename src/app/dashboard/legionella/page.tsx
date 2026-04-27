@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useApp, THRESHOLDS } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, BarChart, Bar, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Bar, ComposedChart, Legend } from 'recharts';
 
 const APERTURA_PUNTOS_MAESTRO: {planta:string;ramal:string;punto:string;ubicacion:string}[] = [
   {planta:"Sótano zona limpieza",ramal:"vestuario limpieza mujeres",punto:"GRIFO 1",ubicacion:"Vestuario hombres trabajadores"},
@@ -34,37 +34,10 @@ const APERTURA_PUNTOS_MAESTRO: {planta:string;ramal:string;punto:string;ubicacio
   {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 4 isomix",ubicacion:"Vestuario -1.2"},
   {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 5 isomix",ubicacion:"Vestuario -1.2"},
   {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 6 isomix",ubicacion:"Vestuario -1.2"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Vestuario -1.3"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Vestuario -1.3"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1 isomix",ubicacion:"Vestuario -1.3"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 2 isomix",ubicacion:"Vestuario -1.3"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 3 isomix",ubicacion:"Vestuario -1.3"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 4 isomix",ubicacion:"Vestuario -1.3"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 5 isomix",ubicacion:"Vestuario -1.3"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 6 isomix",ubicacion:"Vestuario -1.3"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Vestuario -1.4"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Vestuario -1.4"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1 isomix",ubicacion:"Vestuario -1.4"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 2 isomix",ubicacion:"Vestuario -1.4"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 3 isomix",ubicacion:"Vestuario -1.4"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 4 isomix",ubicacion:"Vestuario -1.4"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 5 isomix",ubicacion:"Vestuario -1.4"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 6 isomix",ubicacion:"Vestuario -1.4"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"vestuario arbitros -1.1"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1",ubicacion:"vestuario arbitros -1.1"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"vestuario arbitros -1.2"},
-  {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"DUCHA 1",ubicacion:"vestuario arbitros -1.2"},
   {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO",ubicacion:"Aseo hombres"},
   {planta:"Sótano zona fútbol",ramal:"vestuario arbitros -1.2",punto:"GRIFO",ubicacion:"Aseo mujeres"},
   {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Aseo zona médica"},
   {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Aseo zona médica"},
-  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO",ubicacion:"Vestuario médicos mujeres"},
-  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"DUCHA regulador manual",ubicacion:"Vestuario médicos mujeres"},
-  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO",ubicacion:"Vestuario médicos hombres"},
-  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"DUCHA regulador manual",ubicacion:"Vestuario médicos hombres"},
-  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 1",ubicacion:"Centro fisioterapia"},
-  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 2",ubicacion:"Centro fisioterapia"},
-  {planta:"Sótano zona médica",ramal:"vestuario arbitros -1.2",punto:"GRIFO 3",ubicacion:"Centro fisioterapia"},
   {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 1 isomix",ubicacion:"Piscina"},
   {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 2 isomix",ubicacion:"Piscina"},
   {planta:"Baja zona piscina",ramal:"duchas piscina",punto:"DUCHA 3 isomix",ubicacion:"Piscina"},
@@ -76,249 +49,28 @@ const APERTURA_PUNTOS_MAESTRO: {planta:string;ramal:string;punto:string;ubicacio
   {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO",ubicacion:"Aseo mujeres"},
   {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"Aseo hombres"},
   {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"Aseo hombres"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO",ubicacion:"Aseo minusválidos"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 8 agua fría",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 9 agua fría",ubicacion:"vestuario 0.1"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 8 agua fría",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 9 agua fría",ubicacion:"vestuario 0.2"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 8 agua fría",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 9 agua fría",ubicacion:"vestuario 0.3"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.4 limpieza"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.4 limpieza"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 1",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 2",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 3",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 4",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 5",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 6",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 7",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 8",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 9",ubicacion:"vestuario 0.5"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 1",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 2",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 3",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 4",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 5",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 6",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 7",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 8",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA  isomix 9",ubicacion:"vestuario 0.6"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 1",ubicacion:"vestuario 0.7 personal"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 2",ubicacion:"vestuario 0.7 personal"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 3",ubicacion:"vestuario 0.7 personal"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"GRIFO 4",ubicacion:"vestuario 0.7 personal"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario 0.7 personal"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario 0.7 personal"},
-  {planta:"Baja zona vestuarios",ramal:"vestuario 0.7",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario 0.7 personal"},
   {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO",ubicacion:"vestuario 1 familiar"},
   {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO",ubicacion:"vestuario 2 familiar"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO",ubicacion:"vestuario 3 minusválidos"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA regulador manual",ubicacion:"vestuario 3 minusválidos"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO",ubicacion:"vestuario 4 minusválidos"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA regulador manual",ubicacion:"vestuario 4 minusválidos"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 1",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 2",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 3",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 4",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 5",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 6",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario mujeres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 1",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 2",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 3",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 4",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 5",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"GRIFO 6",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 1 regulador manual",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 2 regulador manual",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 3 regulador manual",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 4 regulador manual",ubicacion:"Vestuario hombres"},
-  {planta:"Baja vest. hidromasaje",ramal:"vestuarios hombres",punto:"DUCHA 5 regulador manual",ubicacion:"Vestuario hombres"},
   {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Vestuario 1"},
   {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA",ubicacion:"Vestuario 1"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Vestuario 2"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Vestuario 3 minusválidos"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA",ubicacion:"Vestuario 3 minusválidos"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Vestuario 4 minusválidos"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA",ubicacion:"Vestuario 4 minusválidos"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Aseo poco uso"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"Servicios mujeres"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"Servicios mujeres"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 3",ubicacion:"Servicios mujeres"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 4",ubicacion:"Servicios mujeres"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"Servicios hombres"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"Servicios hombres"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO",ubicacion:"Zona socorristas enfermería"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 1",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 2",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 3",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 4",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 5",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 6",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 7",ubicacion:"vestuario mujeres 5"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 1 regulador manual",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 2 regulador manual",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 3 regulador manual",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 4 regulador manual",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 5 regulador manual",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 6 regulador manual",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 7 regulador manual",ubicacion:"vestuario mujeres 6"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 1",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 2",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 3",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 4",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 5",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 6",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA  isomix 7",ubicacion:"Vestuario hombres 7"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 1",ubicacion:"Vestuario hombres 8"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"GRIFO 2",ubicacion:"Vestuario hombres 8"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 1 regulador manual",ubicacion:"Vestuario hombres 8"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 2 regulador manual",ubicacion:"Vestuario hombres 8"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 3 regulador manual",ubicacion:"Vestuario hombres 8"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 4 regulador manual",ubicacion:"Vestuario hombres 8"},
-  {planta:"Baja vest. piscina",ramal:"vestuario hombres 8",punto:"DUCHA 5 regulador manual",ubicacion:"Vestuario hombres 8"},
   {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Aseo hombres"},
   {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Aseo hombres"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Aseo mujeres"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Aseo mujeres"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.1"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.1"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.1"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.1"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.1"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.1"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.1"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.2"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.2"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.2"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.2"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.2"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.2"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.2"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.2"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.3"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.3"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.3"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.3"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.3"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.3"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.3"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.3"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.4"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.4"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.4"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.4"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.4"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.4"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.4"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.4"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.5"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.5"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.5"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.5"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.5"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.5"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.5"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.5"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 1",ubicacion:"Vestuario 1.6"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO 2",ubicacion:"Vestuario 1.6"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 1",ubicacion:"Vestuario 1.6"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 2",ubicacion:"Vestuario 1.6"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 3",ubicacion:"Vestuario 1.6"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 4",ubicacion:"Vestuario 1.6"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 5",ubicacion:"Vestuario 1.6"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"DUCHA  isomix 6",ubicacion:"Vestuario 1.6"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO",ubicacion:"Vestuario arbitros1.1"},
-  {planta:"Primera vestuarios",ramal:"vestuario 1.6",punto:"GRIFO anulado",ubicacion:"Vestuario arbitros1.2"},
   {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO",ubicacion:"Aseo minusválidos"},
   {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 1",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 2",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 3",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 4",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 5",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 6",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 7",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 8",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 9",ubicacion:"Servicios mujeres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 10",ubicacion:"Servicios mujeres"},
   {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 1",ubicacion:"Servicios hombres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 2",ubicacion:"Servicios hombres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 3",ubicacion:"Servicios hombres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 4",ubicacion:"Servicios hombres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 5",ubicacion:"Servicios hombres"},
-  {planta:"Segunda",ramal:"ramal único sólo AFCH",punto:"GRIFO 6",ubicacion:"Servicios hombres"},
 ];
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-// Fixed point lists from the official excel
 const TERMOMETROS_POINTS = [
-  'entrada sotano por vestuarios',
-  'salida ACS',
-  'vestuario hombres pisina',
-  'vestuario hombres hidromasaje',
-  'vestuario futbol -1.2',
-  'vestuario cancha arriba 1.6',
-  'vestuario 0.8',
+  'entrada sotano por vestuarios','salida ACS','vestuario hombres pisina',
+  'vestuario hombres hidromasaje','vestuario futbol -1.2','vestuario cancha arriba 1.6','vestuario 0.8',
 ];
 
 const PURGA_MENSUAL_POINTS = [
-  'vestuario limpieza mujeres',
-  'vestuario arbitros -1.2',
-  'duchas piscina',
-  'vestuario 0.7',
-  'vestuarios hombres hidromasaje',
-  'vestuario hombres 8 piscina',
-  'vestuario 1.6',
+  'vestuario limpieza mujeres','vestuario arbitros -1.2','duchas piscina',
+  'vestuario 0.7','vestuarios hombres hidromasaje','vestuario hombres 8 piscina','vestuario 1.6',
 ];
 
 function valueClass(v: number | null | undefined, min: number, max: number) {
@@ -330,7 +82,6 @@ interface PurgaSemanal { id: string; year: number; month: number; week: number; 
 interface TurbidezSemanal { id: string; year: number; month: number; week: number; turbidez: number | null; punto_medida: string | null; nombre: string | null; }
 interface AperturaSemanal { id: string; year: number; month: number; week: number; todos_abiertos: boolean; fecha_realizacion: string | null; nombre: string | null; observaciones: string | null; }
 interface AperturaTerminal { id: string; year: number; month: number; planta: string | null; ramal: string | null; punto_terminal: string | null; ubicacion: string | null; semana_1: string | null; semana_2: string | null; semana_3: string | null; semana_4: string | null; semana_5: string | null; }
-
 
 // ─── PDF Export Legionella ────────────────────────────────────────────────────
 function exportLegionellaPDF(
@@ -347,14 +98,13 @@ function exportLegionellaPDF(
   const clr = (v: number | null, min: number, max: number) =>
     v == null ? '#888' : (v < min || v > max) ? '#dc2626' : '#15803d';
 
+  // ── CAMBIO 1: Sin columnas Ramal 1 y Ramal 2 ──────────────────────────────
   const tempRows = [...tempsMonth].reverse().map(t => `
     <tr>
       <td>${t.date}</td>
       <td style="color:${clr(t.tempRetorno,50,65)};font-weight:600">${t.tempRetorno?.toFixed(1)??'—'}°C</td>
       <td style="color:${clr(t.tempDeposito1,60,70)};font-weight:600">${t.tempDeposito1?.toFixed(1)??'—'}°C</td>
       <td style="color:${clr(t.tempDeposito2,60,70)};font-weight:600">${t.tempDeposito2?.toFixed(1)??'—'}°C</td>
-      <td>${t.tempRamal1?.toFixed(1)??'—'}°C</td>
-      <td>${t.tempRamal2?.toFixed(1)??'—'}°C</td>
     </tr>`).join('');
 
   const bioRows = [...biocidaMonth].reverse().map(b => {
@@ -390,21 +140,15 @@ function exportLegionellaPDF(
     </tr>`;
   }).join('');
 
-  // Apertura: build semana summary from simple check table, then list all 289 points
-  // Each semana row says whether ALL terminals were opened that week
   const semLookup: Record<number, typeof aperturaSemMonth[0]> = {};
   for (const s of aperturaSemMonth) { semLookup[s.week] = s; }
-
   const svSem = (week: number) => {
     const s = semLookup[week];
     if (!s) return {v:'—', c:'#888'};
     return s.todos_abiertos ? {v:'✓', c:'#15803d'} : {v:'✗', c:'#dc2626'};
   };
-
-  // Summary header rows (one per week)
   const aperturaSummaryRows = [1,2,3,4,5].map(w => {
-    const s = semLookup[w];
-    const sv2 = svSem(w);
+    const s = semLookup[w]; const sv2 = svSem(w);
     return `<tr>
       <td style="font-weight:600">Semana ${w}</td>
       <td>${s?.fecha_realizacion??'—'}</td>
@@ -413,25 +157,21 @@ function exportLegionellaPDF(
     </tr>`;
   }).join('');
 
-  // Full point list: group master list by planta then ramal, apply semana results to all
   const byPlantaRamal: Record<string, Record<string, typeof APERTURA_PUNTOS_MAESTRO>> = {};
   for (const p of APERTURA_PUNTOS_MAESTRO) {
     if (!byPlantaRamal[p.planta]) byPlantaRamal[p.planta] = {};
     if (!byPlantaRamal[p.planta][p.ramal]) byPlantaRamal[p.planta][p.ramal] = [];
     byPlantaRamal[p.planta][p.ramal].push(p);
   }
-
   const aperturaRows = Object.entries(byPlantaRamal).map(([planta, ramales]) => {
     const plantaHeader = `<tr style="background:#0f1f3d"><td colspan="7" style="font-weight:700;color:#fff;padding:7px 10px;font-size:9pt;text-transform:uppercase;letter-spacing:.04em">${planta}</td></tr>`;
     const ramalRows = Object.entries(ramales).map(([ramal, pts]) => {
       const ramalHeader = `<tr style="background:#f1f5f9"><td colspan="7" style="font-weight:700;color:#334155;text-transform:capitalize;padding:5px 10px 5px 20px;font-size:8.5pt">↳ ${ramal}</td></tr>`;
-      const ptRows = pts.map(p => {
-        return `<tr>
+      const ptRows = pts.map(p => `<tr>
           <td style="font-size:8.5pt;text-transform:uppercase;font-weight:600;padding-left:28px">${p.punto}</td>
           <td style="font-size:8pt;color:#64748b">${p.ubicacion}</td>
           ${[1,2,3,4,5].map(w => { const sv2=svSem(w); return `<td style="text-align:center;color:${sv2.c};font-weight:700;font-size:10pt">${sv2.v}</td>`; }).join('')}
-        </tr>`;
-      }).join('');
+        </tr>`).join('');
       return ramalHeader + ptRows;
     }).join('');
     return plantaHeader + ramalRows;
@@ -473,7 +213,6 @@ tr:nth-child(even) td{background:#fafbfc}
 .sig-area{margin-top:36px;page-break-inside:avoid}
 </style></head><body>
 
-<!-- PORTADA -->
 <div class="cover">
   <div class="cover-logo-area"><div class="cover-logo">Aqua<span>Dash</span></div><div class="cover-badge">Documento oficial</div></div>
   <div>
@@ -503,12 +242,12 @@ tr:nth-child(even) td{background:#fafbfc}
   <div class="legend-item"><div class="legend-dot" style="background:#888"></div>Sin dato</div>
 </div>
 
-<!-- 1. TEMPERATURAS ACS -->
+<!-- 1. TEMPERATURAS ACS — sin Ramal 1/2 -->
 <div class="section">
   <div class="section-header"><div class="section-title">1. Temperatura diaria ACS</div><div class="section-sub">Retorno ≥ 50°C · Depósitos ≥ 60°C</div></div>
   ${tempsMonth.length === 0 ? '<p style="color:#94a3b8;font-size:9pt;padding:12px 0">Sin registros este mes</p>' : `
   <table>
-    <thead><tr><th>Fecha</th><th>Tª Retorno (°C)</th><th>Tª Depósito 1 (°C)</th><th>Tª Depósito 2 (°C)</th><th>Ramal 1</th><th>Ramal 2</th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Tª Retorno (°C)</th><th>Tª Depósito 1 (°C)</th><th>Tª Depósito 2 (°C)</th></tr></thead>
     <tbody>${tempRows}</tbody>
   </table>`}
 </div>
@@ -542,20 +281,17 @@ tr:nth-child(even) td{background:#fafbfc}
 </div>
 
 <!-- 5. APERTURA PUNTOS TERMINALES -->
-${`
 <div class="section" style="page-break-before:always">
   <div class="section-header"><div class="section-title">5. Apertura semanal puntos terminales</div><div class="section-sub">Apertura manual de terminales no utilizados</div></div>
-  <p style="font-size:8.5pt;color:#475569;margin-bottom:12px">Resumen semanal: indica si se abrieron todos los puntos terminales de la instalación.</p>
   <table style="margin-bottom:20px">
     <thead><tr><th>Semana</th><th>Fecha</th><th>Responsable</th><th>Resultado</th></tr></thead>
     <tbody>${aperturaSummaryRows}</tbody>
   </table>
-  <p style="font-size:8.5pt;color:#475569;margin-bottom:10px">Listado completo de puntos terminales de la instalación (289 puntos):</p>
   <table>
     <thead><tr><th>Punto terminal</th><th>Ubicación</th><th style="text-align:center">S1</th><th style="text-align:center">S2</th><th style="text-align:center">S3</th><th style="text-align:center">S4</th><th style="text-align:center">S5</th></tr></thead>
     <tbody>${aperturaRows}</tbody>
   </table>
-</div>`}
+</div>
 
 <!-- FIRMAS -->
 <div class="sig-area">
@@ -566,7 +302,7 @@ ${`
     <div style="border-top:1px solid #334155;padding-top:6px"><p style="font-size:8pt;color:#94a3b8">Nombre y firma</p></div></div>`).join('')}
   </div>
   <div style="margin-top:24px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
-    <p style="font-size:7.5pt;color:#64748b;line-height:1.6"><strong>Nota legal:</strong> Documento oficial de control de legionella conforme al Real Decreto 487/2022 sobre instalaciones de riesgo de proliferación y dispersión de Legionella. Emitido mediante sistema informatizado AquaDash. En caso de incumplimiento de los valores de referencia, se tomarán las medidas correctoras establecidas en el Plan de Mantenimiento.</p>
+    <p style="font-size:7.5pt;color:#64748b;line-height:1.6"><strong>Nota legal:</strong> Documento oficial de control de legionella conforme al Real Decreto 487/2022. Emitido mediante sistema informatizado AquaDash.</p>
   </div>
 </div>
 
@@ -586,7 +322,6 @@ export default function LegionellaPage() {
   const [formType, setFormType] = useState<'temp' | 'biocida' | 'purga_sem' | 'turbidez_sem' | 'purga_men' | 'termometros' | 'apertura'>('temp');
   const [saving, setSaving] = useState(false);
 
-  // Form state
   const [fDate, setFDate] = useState(new Date().toISOString().split('T')[0]);
   const [fMonth, setFMonth] = useState(String(new Date().getMonth() + 1));
   const [fRetorno, setFRetorno] = useState('');
@@ -600,22 +335,19 @@ export default function LegionellaPage() {
   const [fNombre, setFNombre] = useState('');
   const [fWeek, setFWeek] = useState('');
   const [fTurbidez, setFTurbidez] = useState('');
-  // Checkbox states for multi-point forms
   const [termometrosData, setTermometrosData] = useState<Record<string, string>>({});
   const [purgaMenChecks, setPurgaMenChecks] = useState<Record<string, boolean>>({});
   const [aperturaAllOpen, setAperturaAllOpen] = useState(true);
   const [aperturaWeek, setAperturaWeek] = useState('1');
 
-  // Extra data
   const [purgaSemanal, setPurgaSemanal] = useState<PurgaSemanal[]>([]);
   const [turbidezSemanal, setTurbidezSemanal] = useState<TurbidezSemanal[]>([]);
   const [apertura, setApertura] = useState<AperturaTerminal[]>([]);
   const [aperturaSemanal, setAperturaSemanal] = useState<AperturaSemanal[]>([]);
-  const [loadingExtra, setLoadingExtra] = useState(true);
 
   useEffect(() => {
     async function loadExtra() {
-      const [{ data: ps }, { data: ts }, { data: at }] = await Promise.all([
+      const [{ data: ps }, { data: ts }, { data: at }, { data: as_ }] = await Promise.all([
         supabase.from('legionella_purga_semanal').select('*').order('year').order('month').order('week'),
         supabase.from('legionella_turbidez_semanal').select('*').order('year').order('month').order('week'),
         supabase.from('legionella_apertura_terminales').select('*').order('year').order('month'),
@@ -624,7 +356,7 @@ export default function LegionellaPage() {
       if (ps) setPurgaSemanal(ps);
       if (ts) setTurbidezSemanal(ts);
       if (at) setApertura(at);
-      setLoadingExtra(false);
+      if (as_) setAperturaSemanal(as_);
     }
     loadExtra();
   }, []);
@@ -638,9 +370,10 @@ export default function LegionellaPage() {
   const lastBio = legionellaBiocida[legionellaBiocida.length - 1];
 
   const tempChartData = legionellaTemps.slice(-31).map(e => ({ date: e.date.slice(5), retorno: e.tempRetorno, dep1: e.tempDeposito1, dep2: e.tempDeposito2 }));
+
+  // ── CAMBIO 2: datos para gráfica biocida con ph ────────────────────────────
   const biocidaData = legionellaBiocida.slice(-31).map(e => ({ date: e.date.slice(5), biocida: e.biocida, ph: e.ph }));
 
-  // Month filtered data
   const tempsMonth = legionellaTemps.filter(t => parseInt(t.date.slice(5,7)) === selectedMonth);
   const biocidaMonth = legionellaBiocida.filter(b => parseInt(b.date.slice(5,7)) === selectedMonth);
   const purgaSemMonth = purgaSemanal.filter(p => p.month === selectedMonth);
@@ -648,9 +381,7 @@ export default function LegionellaPage() {
   const aperturaMonth = apertura.filter(a => a.month === selectedMonth);
   const aperturaSemMonth = aperturaSemanal.filter(a => a.month === selectedMonth);
 
-  // KPIs compliance
   const semanasDone = purgaSemMonth.filter(p => p.realizada).length;
-  const turbidezDone = turbidezMonth.filter(t => t.turbidez != null).length;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -662,71 +393,39 @@ export default function LegionellaPage() {
     );
   };
 
-  // ── SAVE HANDLERS ────────────────────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true);
     try {
       if (formType === 'temp') {
         const monthName = MONTHS[parseInt(fMonth) - 1];
-        await addLegionellaTemp({
-          date: fDate, month: monthName,
-          tempRetorno: parseFloat(fRetorno) || 0,
-          tempDeposito1: parseFloat(fDep1) || 0,
-          tempDeposito2: parseFloat(fDep2) || 0,
-          tempRamal1: fRamal1 ? parseFloat(fRamal1) : undefined,
-          tempRamal2: fRamal2 ? parseFloat(fRamal2) : undefined,
-        });
+        await addLegionellaTemp({ date: fDate, month: monthName, tempRetorno: parseFloat(fRetorno)||0, tempDeposito1: parseFloat(fDep1)||0, tempDeposito2: parseFloat(fDep2)||0, tempRamal1: fRamal1?parseFloat(fRamal1):undefined, tempRamal2: fRamal2?parseFloat(fRamal2):undefined });
       } else if (formType === 'biocida') {
-        await addLegionellaBiocida({
-          date: fDate, biocida: parseFloat(fBiocida) || null,
-          ph: parseFloat(fPh) || null, puntoDeMedida: fPunto, nombre: fNombre,
-        });
+        await addLegionellaBiocida({ date: fDate, biocida: parseFloat(fBiocida)||null, ph: parseFloat(fPh)||null, puntoDeMedida: fPunto, nombre: fNombre });
       } else if (formType === 'purga_sem') {
-        const m = parseInt(fMonth);
-        const w = parseInt(fWeek);
+        const m = parseInt(fMonth); const w = parseInt(fWeek);
         const id = `ps${currentYear}${m.toString().padStart(2,'0')}${w}`;
-        await supabase.from('legionella_purga_semanal').upsert({ id, year: currentYear, month: m, week: w, fecha_realizacion: fDate.slice(8), nombre: fNombre || null, realizada: true });
+        await supabase.from('legionella_purga_semanal').upsert({ id, year: currentYear, month: m, week: w, fecha_realizacion: fDate.slice(8), nombre: fNombre||null, realizada: true });
         const { data } = await supabase.from('legionella_purga_semanal').select('*').order('year').order('month').order('week');
         if (data) setPurgaSemanal(data);
       } else if (formType === 'turbidez_sem') {
-        const m = parseInt(fMonth);
-        const w = parseInt(fWeek);
+        const m = parseInt(fMonth); const w = parseInt(fWeek);
         const id = `ts${currentYear}${m.toString().padStart(2,'0')}${w}`;
-        await supabase.from('legionella_turbidez_semanal').upsert({ id, year: currentYear, month: m, week: w, turbidez: parseFloat(fTurbidez) || null, punto_medida: fPunto || null, nombre: fNombre || null });
+        await supabase.from('legionella_turbidez_semanal').upsert({ id, year: currentYear, month: m, week: w, turbidez: parseFloat(fTurbidez)||null, punto_medida: fPunto||null, nombre: fNombre||null });
         const { data } = await supabase.from('legionella_turbidez_semanal').select('*').order('year').order('month').order('week');
         if (data) setTurbidezSemanal(data);
       } else if (formType === 'purga_men') {
-        // Insert one row per checked point
         const checkedPoints = PURGA_MENSUAL_POINTS.filter(p => purgaMenChecks[p]);
-        const rows = checkedPoints.map(p => ({
-          id: `pm${Date.now()}_${p.slice(0,10).replace(/ /g,'_')}`,
-          fecha: fDate, punto_terminal: p, ramal: null, nombre: fNombre || null,
-        }));
+        const rows = checkedPoints.map(p => ({ id: `pm${Date.now()}_${p.slice(0,10).replace(/ /g,'_')}`, fecha: fDate, punto_terminal: p, ramal: null, nombre: fNombre||null }));
         if (rows.length > 0) await supabase.from('legionella_purga_mensual').insert(rows);
         setPurgaMenChecks({});
       } else if (formType === 'termometros') {
-        // Insert one row per point that has a temperature entered
-        const rows = TERMOMETROS_POINTS
-          .filter(p => termometrosData[p])
-          .map(p => ({
-            id: `tr${Date.now()}_${p.slice(0,10).replace(/ /g,'_')}_${Math.random().toString(36).slice(2,6)}`,
-            fecha: fDate, punto_terminal: p,
-            temperatura: parseFloat(termometrosData[p]) || null,
-            nombre: fNombre || null,
-          }));
+        const rows = TERMOMETROS_POINTS.filter(p => termometrosData[p]).map(p => ({ id: `tr${Date.now()}_${p.slice(0,10).replace(/ /g,'_')}_${Math.random().toString(36).slice(2,6)}`, fecha: fDate, punto_terminal: p, temperatura: parseFloat(termometrosData[p])||null, nombre: fNombre||null }));
         if (rows.length > 0) await supabase.from('legionella_termometros_ramal').insert(rows);
         setTermometrosData({});
       } else if (formType === 'apertura') {
-        const m = parseInt(fMonth);
-        const w = parseInt(aperturaWeek);
+        const m = parseInt(fMonth); const w = parseInt(aperturaWeek);
         const id = `as${currentYear}${m.toString().padStart(2,'0')}${w}`;
-        await supabase.from('legionella_apertura_semanal').upsert({
-          id, year: currentYear, month: m, week: w,
-          todos_abiertos: aperturaAllOpen,
-          fecha_realizacion: fDate || null,
-          nombre: fNombre || null,
-          observaciones: null,
-        });
+        await supabase.from('legionella_apertura_semanal').upsert({ id, year: currentYear, month: m, week: w, todos_abiertos: aperturaAllOpen, fecha_realizacion: fDate||null, nombre: fNombre||null, observaciones: null });
         const { data } = await supabase.from('legionella_apertura_semanal').select('*').order('year').order('month').order('week');
         if (data) setAperturaSemanal(data);
       }
@@ -737,10 +436,66 @@ export default function LegionellaPage() {
   };
 
   const resetForm = () => { setFDate(new Date().toISOString().split('T')[0]); setFRetorno(''); setFDep1(''); setFDep2(''); setFRamal1(''); setFRamal2(''); setFBiocida(''); setFPh(''); setFPunto(''); setFNombre(''); setFWeek(''); setFTurbidez(''); };
-
   const openForm = (type: typeof formType) => { setFormType(type); setFMonth(String(selectedMonth)); setFormOpen(true); resetForm(); };
-
   const TAB_STYLE = (active: boolean) => ({ padding: '7px 16px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '500' as const, background: active ? '#fff' : 'transparent', color: active ? '#0f1f3d' : '#64748b', boxShadow: active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s', whiteSpace: 'nowrap' as const });
+
+  // ── CAMBIO 3: KPIs con color completo (igual que contadores) ──────────────
+  const kpiCards = [
+    {
+      label: 'Temp. Retorno', icon: '🌡️',
+      value: last?.tempRetorno != null ? `${last.tempRetorno}°C` : '—',
+      sub: 'mínimo 50°C',
+      ok: last?.tempRetorno != null && last.tempRetorno >= 50,
+      color: last?.tempRetorno != null && last.tempRetorno >= 50 ? '#15803d' : '#dc2626',
+      bg:   last?.tempRetorno != null && last.tempRetorno >= 50 ? '#f0fdf4' : '#fef2f2',
+      border: last?.tempRetorno != null && last.tempRetorno >= 50 ? '#22c55e' : '#ef4444',
+    },
+    {
+      label: 'Depósito 1 (5000L)', icon: '🫙',
+      value: last?.tempDeposito1 != null ? `${last.tempDeposito1}°C` : '—',
+      sub: 'mínimo 60°C',
+      ok: last?.tempDeposito1 != null && last.tempDeposito1 >= 60,
+      color: last?.tempDeposito1 != null && last.tempDeposito1 >= 60 ? '#15803d' : '#dc2626',
+      bg:   last?.tempDeposito1 != null && last.tempDeposito1 >= 60 ? '#f0fdf4' : '#fef2f2',
+      border: last?.tempDeposito1 != null && last.tempDeposito1 >= 60 ? '#22c55e' : '#ef4444',
+    },
+    {
+      label: 'Depósito 2 (5000L)', icon: '🫙',
+      value: last?.tempDeposito2 != null ? `${last.tempDeposito2}°C` : '—',
+      sub: 'mínimo 60°C',
+      ok: last?.tempDeposito2 != null && last.tempDeposito2 >= 60,
+      color: last?.tempDeposito2 != null && last.tempDeposito2 >= 60 ? '#15803d' : '#dc2626',
+      bg:   last?.tempDeposito2 != null && last.tempDeposito2 >= 60 ? '#f0fdf4' : '#fef2f2',
+      border: last?.tempDeposito2 != null && last.tempDeposito2 >= 60 ? '#22c55e' : '#ef4444',
+    },
+    {
+      label: 'Biocida (Cloro)', icon: '🧪',
+      value: lastBio?.biocida != null ? `${lastBio.biocida.toFixed(2)} mg/L` : '—',
+      sub: '0.2–2.0 mg/L',
+      ok: lastBio?.biocida != null && lastBio.biocida >= 0.2 && lastBio.biocida <= 2.0,
+      color: lastBio?.biocida != null && lastBio.biocida >= 0.2 && lastBio.biocida <= 2.0 ? '#15803d' : '#dc2626',
+      bg:   lastBio?.biocida != null && lastBio.biocida >= 0.2 && lastBio.biocida <= 2.0 ? '#f0fdf4' : '#fef2f2',
+      border: lastBio?.biocida != null && lastBio.biocida >= 0.2 && lastBio.biocida <= 2.0 ? '#22c55e' : '#ef4444',
+    },
+    {
+      label: 'pH agua entrada', icon: '⚗️',
+      value: lastBio?.ph != null ? lastBio.ph.toFixed(2) : '—',
+      sub: '7.0–8.0',
+      ok: lastBio?.ph != null && lastBio.ph >= 7.0 && lastBio.ph <= 8.0,
+      color: lastBio?.ph != null && lastBio.ph >= 7.0 && lastBio.ph <= 8.0 ? '#15803d' : '#dc2626',
+      bg:   lastBio?.ph != null && lastBio.ph >= 7.0 && lastBio.ph <= 8.0 ? '#f0fdf4' : '#fef2f2',
+      border: lastBio?.ph != null && lastBio.ph >= 7.0 && lastBio.ph <= 8.0 ? '#22c55e' : '#ef4444',
+    },
+    {
+      label: `Purgas sem. ${MONTH_SHORT[selectedMonth-1]}`, icon: '🚿',
+      value: `${semanasDone}/5`,
+      sub: 'semanas realizadas',
+      ok: semanasDone >= 4,
+      color: semanasDone >= 4 ? '#15803d' : '#d97706',
+      bg:   semanasDone >= 4 ? '#f0fdf4' : '#fffbeb',
+      border: semanasDone >= 4 ? '#22c55e' : '#f59e0b',
+    },
+  ];
 
   return (
     <div>
@@ -772,38 +527,18 @@ export default function LegionellaPage() {
         </div>
       )}
 
-      {/* KPIs */}
+      {/* ── CAMBIO 3: KPIs con color completo ─────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        <div className="metric-card" style={{ borderTop: `3px solid ${last?.tempRetorno && last.tempRetorno >= 50 ? '#22c55e' : '#ef4444'}` }}>
-          <div className="metric-label">Temp. Retorno</div>
-          <div className="metric-value" style={{ fontSize: '22px', color: last?.tempRetorno && last.tempRetorno >= 50 ? '#15803d' : '#dc2626' }}>{last?.tempRetorno ?? '—'}°C</div>
-          <div className="metric-sub">mínimo 50°C</div>
-        </div>
-        <div className="metric-card" style={{ borderTop: `3px solid ${last?.tempDeposito1 && last.tempDeposito1 >= 60 ? '#22c55e' : '#ef4444'}` }}>
-          <div className="metric-label">Depósito 1 (5000L)</div>
-          <div className="metric-value" style={{ fontSize: '22px', color: last?.tempDeposito1 && last.tempDeposito1 >= 60 ? '#15803d' : '#dc2626' }}>{last?.tempDeposito1 ?? '—'}°C</div>
-          <div className="metric-sub">mínimo 60°C</div>
-        </div>
-        <div className="metric-card" style={{ borderTop: `3px solid ${last?.tempDeposito2 && last.tempDeposito2 >= 60 ? '#22c55e' : '#ef4444'}` }}>
-          <div className="metric-label">Depósito 2 (5000L)</div>
-          <div className="metric-value" style={{ fontSize: '22px', color: last?.tempDeposito2 && last.tempDeposito2 >= 60 ? '#15803d' : '#dc2626' }}>{last?.tempDeposito2 ?? '—'}°C</div>
-          <div className="metric-sub">mínimo 60°C</div>
-        </div>
-        <div className="metric-card" style={{ borderTop: `3px solid ${lastBio?.biocida && lastBio.biocida >= 0.2 ? '#22c55e' : '#ef4444'}` }}>
-          <div className="metric-label">Biocida (Cloro)</div>
-          <div className="metric-value" style={{ fontSize: '22px', color: lastBio?.biocida && lastBio.biocida >= 0.2 ? '#15803d' : '#dc2626' }}>{lastBio?.biocida?.toFixed(2) ?? '—'}</div>
-          <div className="metric-sub">0.2–2.0 mg/L</div>
-        </div>
-        <div className="metric-card" style={{ borderTop: `3px solid ${lastBio?.ph && lastBio.ph >= 7.0 && lastBio.ph <= 8.0 ? '#22c55e' : '#ef4444'}` }}>
-          <div className="metric-label">pH agua de entrada</div>
-          <div className="metric-value" style={{ fontSize: '22px', color: lastBio?.ph && lastBio.ph >= 7.0 && lastBio.ph <= 8.0 ? '#15803d' : '#dc2626' }}>{lastBio?.ph?.toFixed(2) ?? '—'}</div>
-          <div className="metric-sub">7.0–8.0</div>
-        </div>
-        <div className="metric-card" style={{ borderTop: '3px solid #0077cc' }}>
-          <div className="metric-label">Purgas sem. {MONTH_SHORT[selectedMonth-1]}</div>
-          <div className="metric-value" style={{ fontSize: '22px', color: semanasDone >= 4 ? '#15803d' : '#d97706' }}>{semanasDone}/5</div>
-          <div className="metric-sub">semanas realizadas</div>
-        </div>
+        {kpiCards.map(k => (
+          <div key={k.label} style={{ background: k.bg, borderRadius: '12px', border: `1px solid ${k.border}30`, padding: '16px 18px', borderTop: `3px solid ${k.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '15px' }}>{k.icon}</span>
+              <span style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '0.04em', textTransform: 'uppercase', color: k.color }}>{k.label}</span>
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: k.color, lineHeight: 1.1 }}>{k.value}</div>
+            <div style={{ fontSize: '11px', color: k.color, opacity: 0.75, marginTop: '3px' }}>{k.sub}</div>
+          </div>
+        ))}
       </div>
 
       {/* Month selector */}
@@ -848,7 +583,6 @@ export default function LegionellaPage() {
             </ResponsiveContainer>
           </div>
 
-          {/* Stats cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
             {(['tempRetorno','tempDeposito1','tempDeposito2'] as const).map(key => {
               const vals = legionellaTemps.slice(-30).map(e => e[key]).filter(v => v != null) as number[];
@@ -873,11 +607,8 @@ export default function LegionellaPage() {
             })}
           </div>
 
-          {/* Temps table for selected month */}
           <div className="card" style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', fontSize: '13px', fontWeight: '600', color: '#0f1f3d' }}>
-              Registro — {MONTHS[selectedMonth-1]}
-            </div>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', fontSize: '13px', fontWeight: '600', color: '#0f1f3d' }}>Registro — {MONTHS[selectedMonth-1]}</div>
             <div style={{ overflowX: 'auto', maxHeight: '350px', overflowY: 'auto' }}>
               <table className="data-table">
                 <thead><tr><th>Fecha</th><th>Tª Retorno</th><th>Depósito 1</th><th>Depósito 2</th><th>Ramal 1</th><th>Ramal 2</th></tr></thead>
@@ -900,24 +631,26 @@ export default function LegionellaPage() {
         </div>
       )}
 
-      {/* ── BIOCIDA ── */}
+      {/* ── BIOCIDA — CAMBIO 2: ComposedChart para mostrar Bar + Line juntos ── */}
       {tab === 'biocida' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="card" style={{ padding: '20px' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '14px', fontWeight: '600' }}>Biocida y pH agua de entrada (últimos 30 días)</h3>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={biocidaData} margin={{ top: 5, right: 12, bottom: 0, left: 0 }}>
+              <ComposedChart data={biocidaData} margin={{ top: 5, right: 40, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={35} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={35} domain={[6, 9]} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#0077cc' }} tickLine={false} axisLine={false} width={35} domain={[0, 3]} label={{ value: 'Biocida', angle: -90, position: 'insideLeft', fill: '#0077cc', fontSize: 10 }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#7c3aed' }} tickLine={false} axisLine={false} width={40} domain={[6, 9]} label={{ value: 'pH', angle: 90, position: 'insideRight', fill: '#7c3aed', fontSize: 10 }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 <ReferenceLine yAxisId="left" y={0.2} stroke="#ef4444" strokeDasharray="4 2" />
                 <ReferenceLine yAxisId="left" y={2.0} stroke="#ef4444" strokeDasharray="4 2" />
+                <ReferenceLine yAxisId="right" y={7.0} stroke="#7c3aed" strokeDasharray="4 2" strokeOpacity={0.4} />
+                <ReferenceLine yAxisId="right" y={8.0} stroke="#7c3aed" strokeDasharray="4 2" strokeOpacity={0.4} />
                 <Bar yAxisId="left" dataKey="biocida" fill="#0077cc" name="Biocida (mg/L)" radius={[2,2,0,0]} />
-                <Line yAxisId="right" type="monotone" dataKey="ph" stroke="#7c3aed" dot={false} strokeWidth={2} name="pH" />
-              </BarChart>
+                <Line yAxisId="right" type="monotone" dataKey="ph" stroke="#7c3aed" dot={{ r: 3, fill: '#7c3aed' }} strokeWidth={2} name="pH" connectNulls />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
           <div className="card" style={{ overflow: 'hidden' }}>
@@ -959,21 +692,14 @@ export default function LegionellaPage() {
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0f1f3d', marginBottom: '12px' }}>🚿 Purga semanal acumuladores — {MONTHS[selectedMonth-1]}</h3>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0f1f3d', marginBottom: '12px' }}>🚿 Purga semanal — {MONTHS[selectedMonth-1]}</h3>
               <div className="card" style={{ overflow: 'hidden' }}>
                 <table className="data-table">
                   <thead><tr><th>Semana</th><th>Fecha</th><th>Responsable</th><th>Estado</th></tr></thead>
                   <tbody>
                     {[1,2,3,4,5].map(week => {
                       const r = purgaSemMonth.find(p => p.week === week);
-                      return (
-                        <tr key={week}>
-                          <td style={{ fontWeight: '600' }}>S{week}</td>
-                          <td style={{ fontFamily: 'var(--font-mono)' }}>{r?.fecha_realizacion ? `día ${r.fecha_realizacion}` : '—'}</td>
-                          <td style={{ textTransform: 'capitalize', color: '#64748b' }}>{r?.nombre ?? '—'}</td>
-                          <td>{r?.realizada ? <span className="badge badge-ok">✓ Realizada</span> : <span className="badge badge-warning">Pendiente</span>}</td>
-                        </tr>
-                      );
+                      return (<tr key={week}><td style={{ fontWeight: '600' }}>S{week}</td><td style={{ fontFamily: 'var(--font-mono)' }}>{r?.fecha_realizacion ? `día ${r.fecha_realizacion}` : '—'}</td><td style={{ textTransform: 'capitalize', color: '#64748b' }}>{r?.nombre ?? '—'}</td><td>{r?.realizada ? <span className="badge badge-ok">✓ Realizada</span> : <span className="badge badge-warning">Pendiente</span>}</td></tr>);
                     })}
                   </tbody>
                 </table>
@@ -987,21 +713,13 @@ export default function LegionellaPage() {
                   <tbody>
                     {[1,2,3,4,5].map(week => {
                       const r = turbidezMonth.find(t => t.week === week);
-                      return (
-                        <tr key={week}>
-                          <td style={{ fontWeight: '600' }}>S{week}</td>
-                          <td className={r?.turbidez != null ? (r.turbidez > 1 ? 'val-danger' : 'val-ok') : ''} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{r?.turbidez?.toFixed(2) ?? '—'}</td>
-                          <td style={{ color: '#64748b', fontSize: '12px', textTransform: 'capitalize' }}>{r?.punto_medida ?? '—'}</td>
-                          <td style={{ textTransform: 'capitalize', color: '#64748b' }}>{r?.nombre ?? '—'}</td>
-                        </tr>
-                      );
+                      return (<tr key={week}><td style={{ fontWeight: '600' }}>S{week}</td><td className={r?.turbidez != null ? (r.turbidez > 1 ? 'val-danger' : 'val-ok') : ''} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{r?.turbidez?.toFixed(2) ?? '—'}</td><td style={{ color: '#64748b', fontSize: '12px', textTransform: 'capitalize' }}>{r?.punto_medida ?? '—'}</td><td style={{ textTransform: 'capitalize', color: '#64748b' }}>{r?.nombre ?? '—'}</td></tr>);
                     })}
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
-          {/* Apertura puntos terminales - tabla resumen igual que purga y turbidez */}
           <div style={{ marginTop: '20px' }}>
             <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0f1f3d', marginBottom: '12px' }}>🚪 Apertura puntos terminales — {MONTHS[selectedMonth-1]}</h3>
             <div className="card" style={{ overflow: 'hidden' }}>
@@ -1010,21 +728,7 @@ export default function LegionellaPage() {
                 <tbody>
                   {[1,2,3,4,5].map(week => {
                     const r = aperturaSemMonth.find(a => a.week === week);
-                    return (
-                      <tr key={week}>
-                        <td style={{ fontWeight: '600' }}>S{week}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{r?.fecha_realizacion ?? '—'}</td>
-                        <td style={{ textTransform: 'capitalize', color: '#64748b' }}>{r?.nombre ?? '—'}</td>
-                        <td>
-                          {r ? (
-                            r.todos_abiertos
-                              ? <span style={{ fontSize: '12px', color: '#15803d', fontWeight: '600' }}>✓ Todos abiertos</span>
-                              : <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '600' }}>✗ No todos abiertos</span>
-                          ) : <span style={{ color: '#94a3b8' }}>—</span>}
-                        </td>
-                        <td>{r ? <span className="badge badge-ok">✓ Registrado</span> : <span className="badge badge-warning">Pendiente</span>}</td>
-                      </tr>
-                    );
+                    return (<tr key={week}><td style={{ fontWeight: '600' }}>S{week}</td><td style={{ fontFamily: 'var(--font-mono)' }}>{r?.fecha_realizacion ?? '—'}</td><td style={{ textTransform: 'capitalize', color: '#64748b' }}>{r?.nombre ?? '—'}</td><td>{r ? (r.todos_abiertos ? <span style={{ fontSize: '12px', color: '#15803d', fontWeight: '600' }}>✓ Todos abiertos</span> : <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '600' }}>✗ No todos</span>) : <span style={{ color: '#94a3b8' }}>—</span>}</td><td>{r ? <span className="badge badge-ok">✓ Registrado</span> : <span className="badge badge-warning">Pendiente</span>}</td></tr>);
                   })}
                 </tbody>
               </table>
@@ -1043,12 +747,10 @@ export default function LegionellaPage() {
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            {/* Purga mensual */}
             <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0f1f3d', marginBottom: '12px' }}>🔧 Purga mensual tuberías — {MONTHS[selectedMonth-1]}</h3>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0f1f3d', marginBottom: '12px' }}>🔧 Purga mensual — {MONTHS[selectedMonth-1]}</h3>
               <PurgaMensualTable month={selectedMonth} />
             </div>
-            {/* Termómetros */}
             <div>
               <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0f1f3d', marginBottom: '12px' }}>🌡️ Termómetros por ramal — {MONTHS[selectedMonth-1]}</h3>
               <TermometrosTable month={selectedMonth} />
@@ -1057,31 +759,21 @@ export default function LegionellaPage() {
         </div>
       )}
 
-      {/* ── MODAL FORMULARIOS ── */}
+      {/* ── MODAL ── */}
       {formOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="card" style={{ padding: '28px', width: '100%', maxWidth: formType === 'termometros' || formType === 'purga_men' ? '540px' : '440px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#0f1f3d', margin: 0 }}>
-                {formType === 'temp' ? '🌡️ Nueva temperatura ACS' :
-                 formType === 'biocida' ? '🧪 Nuevo biocida / pH' :
-                 formType === 'purga_sem' ? '🚿 Purga semanal acumuladores' :
-                 formType === 'turbidez_sem' ? '💧 Turbidez semanal' :
-                 formType === 'purga_men' ? '🔧 Purga mensual tuberías' :
-                 formType === 'termometros' ? '🌡️ Termómetros por ramal' :
-                 '🚪 Apertura puntos terminales'}
+                {formType === 'temp' ? '🌡️ Nueva temperatura ACS' : formType === 'biocida' ? '🧪 Nuevo biocida / pH' : formType === 'purga_sem' ? '🚿 Purga semanal' : formType === 'turbidez_sem' ? '💧 Turbidez semanal' : formType === 'purga_men' ? '🔧 Purga mensual tuberías' : formType === 'termometros' ? '🌡️ Termómetros ramal' : '🚪 Apertura puntos terminales'}
               </h2>
               <button onClick={() => setFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#94a3b8' }}>×</button>
             </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Temp ACS */}
               {formType === 'temp' && (<>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha</label><input className="input-field" type="date" value={fDate} onChange={e => setFDate(e.target.value)} /></div>
-                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Mes</label>
-                    <select className="input-field" value={fMonth} onChange={e => setFMonth(e.target.value)}>{MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}</select>
-                  </div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Mes</label><select className="input-field" value={fMonth} onChange={e => setFMonth(e.target.value)}>{MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}</select></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Tª Retorno (°C) <span style={{color:'#ef4444'}}>mín. 50°C</span></label><input className="input-field" type="number" step="0.1" placeholder="ej: 55" value={fRetorno} onChange={e => setFRetorno(e.target.value)} /></div>
@@ -1091,44 +783,32 @@ export default function LegionellaPage() {
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Ramal 2 (°C) <span style={{color:'#94a3b8'}}>opcional</span></label><input className="input-field" type="number" step="0.1" placeholder="ej: 52" value={fRamal2} onChange={e => setFRamal2(e.target.value)} /></div>
                 </div>
               </>)}
-
-              {/* Biocida */}
               {formType === 'biocida' && (<>
                 <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha</label><input className="input-field" type="date" value={fDate} onChange={e => setFDate(e.target.value)} /></div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Biocida (mg/L) <span style={{color:'#64748b'}}>0.2–2.0</span></label><input className="input-field" type="number" step="0.01" placeholder="ej: 0.8" value={fBiocida} onChange={e => setFBiocida(e.target.value)} /></div>
-                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>pH agua de entrada <span style={{color:'#64748b'}}>7.0–8.0</span></label><input className="input-field" type="number" step="0.01" placeholder="ej: 7.5" value={fPh} onChange={e => setFPh(e.target.value)} /></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>pH <span style={{color:'#64748b'}}>7.0–8.0</span></label><input className="input-field" type="number" step="0.01" placeholder="ej: 7.5" value={fPh} onChange={e => setFPh(e.target.value)} /></div>
                 </div>
                 <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Punto de medida</label><input className="input-field" type="text" placeholder="ej: depósito 1" value={fPunto} onChange={e => setFPunto(e.target.value)} /></div>
                 <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Responsable</label><input className="input-field" type="text" placeholder="Nombre" value={fNombre} onChange={e => setFNombre(e.target.value)} /></div>
               </>)}
-
-              {/* Purga semanal */}
               {formType === 'purga_sem' && (<>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Mes</label>
-                    <select className="input-field" value={fMonth} onChange={e => setFMonth(e.target.value)}>{MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}</select></div>
-                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Semana</label>
-                    <select className="input-field" value={fWeek} onChange={e => setFWeek(e.target.value)}><option value="">Seleccionar...</option>{[1,2,3,4,5].map(w => <option key={w} value={w}>Semana {w}</option>)}</select></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Mes</label><select className="input-field" value={fMonth} onChange={e => setFMonth(e.target.value)}>{MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}</select></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Semana</label><select className="input-field" value={fWeek} onChange={e => setFWeek(e.target.value)}><option value="">Seleccionar...</option>{[1,2,3,4,5].map(w => <option key={w} value={w}>Semana {w}</option>)}</select></div>
                 </div>
-                <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha de realización</label><input className="input-field" type="date" value={fDate} onChange={e => setFDate(e.target.value)} /></div>
+                <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha</label><input className="input-field" type="date" value={fDate} onChange={e => setFDate(e.target.value)} /></div>
                 <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Responsable</label><input className="input-field" type="text" placeholder="Nombre" value={fNombre} onChange={e => setFNombre(e.target.value)} /></div>
               </>)}
-
-              {/* Turbidez semanal */}
               {formType === 'turbidez_sem' && (<>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Mes</label>
-                    <select className="input-field" value={fMonth} onChange={e => setFMonth(e.target.value)}>{MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}</select></div>
-                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Semana</label>
-                    <select className="input-field" value={fWeek} onChange={e => setFWeek(e.target.value)}><option value="">Seleccionar...</option>{[1,2,3,4,5].map(w => <option key={w} value={w}>Semana {w}</option>)}</select></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Mes</label><select className="input-field" value={fMonth} onChange={e => setFMonth(e.target.value)}>{MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}</select></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Semana</label><select className="input-field" value={fWeek} onChange={e => setFWeek(e.target.value)}><option value="">Seleccionar...</option>{[1,2,3,4,5].map(w => <option key={w} value={w}>Semana {w}</option>)}</select></div>
                 </div>
                 <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Turbidez (UNF)</label><input className="input-field" type="number" step="0.01" placeholder="ej: 0.5" value={fTurbidez} onChange={e => setFTurbidez(e.target.value)} /></div>
                 <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Punto de medida</label><input className="input-field" type="text" placeholder="ej: Duchas 1ª planta" value={fPunto} onChange={e => setFPunto(e.target.value)} /></div>
                 <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Responsable</label><input className="input-field" type="text" placeholder="Nombre" value={fNombre} onChange={e => setFNombre(e.target.value)} /></div>
               </>)}
-
-              {/* Purga mensual tuberías — CHECKBOXES */}
               {formType === 'purga_men' && (<>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha</label><input className="input-field" type="date" value={fDate} onChange={e => setFDate(e.target.value)} /></div>
@@ -1138,28 +818,18 @@ export default function LegionellaPage() {
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '8px' }}>Puntos terminales purgados</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {PURGA_MENSUAL_POINTS.map(p => (
-                      <label key={p} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: purgaMenChecks[p] ? '#eff6ff' : '#f8fafc', borderRadius: '8px', border: `1px solid ${purgaMenChecks[p] ? '#bfdbfe' : '#e2e8f0'}`, cursor: 'pointer', transition: 'all 0.15s' }}>
-                        <input type="checkbox" checked={!!purgaMenChecks[p]} onChange={e => setPurgaMenChecks(prev => ({ ...prev, [p]: e.target.checked }))}
-                          style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0077cc' }} />
-                        <span style={{ fontSize: '13px', fontWeight: purgaMenChecks[p] ? '600' : '400', color: purgaMenChecks[p] ? '#0f1f3d' : '#475569', textTransform: 'capitalize' }}>{p}</span>
-                        {purgaMenChecks[p] && <span style={{ marginLeft: 'auto', color: '#15803d', fontSize: '14px' }}>✓</span>}
+                      <label key={p} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: purgaMenChecks[p] ? '#eff6ff' : '#f8fafc', borderRadius: '8px', border: `1px solid ${purgaMenChecks[p] ? '#bfdbfe' : '#e2e8f0'}`, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={!!purgaMenChecks[p]} onChange={e => setPurgaMenChecks(prev => ({ ...prev, [p]: e.target.checked }))} style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0077cc' }} />
+                        <span style={{ fontSize: '13px', textTransform: 'capitalize' }}>{p}</span>
                       </label>
                     ))}
                   </div>
                   <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
-                    <button type="button" onClick={() => setPurgaMenChecks(Object.fromEntries(PURGA_MENSUAL_POINTS.map(p => [p, true])))}
-                      style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', color: '#0077cc', fontWeight: '600' }}>
-                      ✓ Seleccionar todos
-                    </button>
-                    <button type="button" onClick={() => setPurgaMenChecks({})}
-                      style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', color: '#64748b' }}>
-                      Limpiar
-                    </button>
+                    <button type="button" onClick={() => setPurgaMenChecks(Object.fromEntries(PURGA_MENSUAL_POINTS.map(p => [p, true])))} style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', color: '#0077cc', fontWeight: '600' }}>✓ Todos</button>
+                    <button type="button" onClick={() => setPurgaMenChecks({})} style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', color: '#64748b' }}>Limpiar</button>
                   </div>
                 </div>
               </>)}
-
-              {/* Termómetros ramal — un input por punto */}
               {formType === 'termometros' && (<>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha</label><input className="input-field" type="date" value={fDate} onChange={e => setFDate(e.target.value)} /></div>
@@ -1170,57 +840,37 @@ export default function LegionellaPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {TERMOMETROS_POINTS.map(p => {
                       const val = termometrosData[p] || '';
-                      const numVal = parseFloat(val);
-                      const isLow = val && numVal < 50;
+                      const isLow = val && parseFloat(val) < 50;
                       return (
                         <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: isLow ? '#fef2f2' : '#f8fafc', borderRadius: '8px', border: `1px solid ${isLow ? '#fecaca' : '#e2e8f0'}` }}>
                           <span style={{ flex: 1, fontSize: '13px', textTransform: 'capitalize', color: '#334155' }}>{p}</span>
-                          <input type="number" step="0.1" placeholder="—" value={val}
-                            onChange={e => setTermometrosData(prev => ({ ...prev, [p]: e.target.value }))}
-                            style={{ width: '80px', padding: '5px 8px', borderRadius: '6px', border: `1px solid ${isLow ? '#fca5a5' : '#e2e8f0'}`, fontSize: '13px', fontFamily: 'var(--font-mono)', textAlign: 'center', background: isLow ? '#fff' : '#fff', outline: 'none' }} />
-                          <span style={{ fontSize: '11px', color: '#94a3b8', width: '20px' }}>°C</span>
-                          {isLow && <span title="Por debajo del mínimo">🚨</span>}
-                          {val && !isLow && <span style={{ color: '#15803d' }}>✓</span>}
+                          <input type="number" step="0.1" placeholder="—" value={val} onChange={e => setTermometrosData(prev => ({ ...prev, [p]: e.target.value }))} style={{ width: '80px', padding: '5px 8px', borderRadius: '6px', border: `1px solid ${isLow ? '#fca5a5' : '#e2e8f0'}`, fontSize: '13px', fontFamily: 'var(--font-mono)', textAlign: 'center', outline: 'none' }} />
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>°C</span>
+                          {isLow && <span>🚨</span>}
                         </div>
                       );
                     })}
                   </div>
                 </div>
               </>)}
-
-              {/* Apertura puntos terminales */}
               {formType === 'apertura' && (<>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Mes</label>
-                    <select className="input-field" value={fMonth} onChange={e => setFMonth(e.target.value)}>{MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}</select></div>
-                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Semana</label>
-                    <select className="input-field" value={aperturaWeek} onChange={e => setAperturaWeek(e.target.value)}>{[1,2,3,4,5].map(w => <option key={w} value={w}>Semana {w}</option>)}</select></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Mes</label><select className="input-field" value={fMonth} onChange={e => setFMonth(e.target.value)}>{MONTHS.map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}</select></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Semana</label><select className="input-field" value={aperturaWeek} onChange={e => setAperturaWeek(e.target.value)}>{[1,2,3,4,5].map(w => <option key={w} value={w}>Semana {w}</option>)}</select></div>
                 </div>
                 <div style={{ padding: '16px', background: aperturaAllOpen ? '#eff6ff' : '#fef2f2', borderRadius: '10px', border: `1px solid ${aperturaAllOpen ? '#bfdbfe' : '#fecaca'}` }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={aperturaAllOpen} onChange={e => setAperturaAllOpen(e.target.checked)}
-                      style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#0077cc' }} />
-                    <div>
-                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f1f3d', display: 'block' }}>
-                        {aperturaAllOpen ? '✅ Se han abierto todos los puntos terminales' : '⚠️ No se han abierto todos los puntos terminales'}
-                      </span>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>
-                        Semana {aperturaWeek} de {MONTHS[parseInt(fMonth)-1]} — Marca si se han abierto manualmente todos los terminales no utilizados
-                      </span>
-                    </div>
+                    <input type="checkbox" checked={aperturaAllOpen} onChange={e => setAperturaAllOpen(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#0077cc' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f1f3d' }}>{aperturaAllOpen ? '✅ Todos los puntos abiertos' : '⚠️ No todos los puntos abiertos'}</span>
                   </label>
                 </div>
-                <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>
-                  Al guardar, se actualizará el registro de todos los {aperturaMonth.length} puntos terminales de este mes con el resultado de la semana {aperturaWeek}.
-                </p>
+                <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha</label><input className="input-field" type="date" value={fDate} onChange={e => setFDate(e.target.value)} /></div>
+                <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Responsable</label><input className="input-field" type="text" placeholder="Nombre" value={fNombre} onChange={e => setFNombre(e.target.value)} /></div>
               </>)}
             </div>
-
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
               <button className="btn btn-secondary" onClick={() => setFormOpen(false)} disabled={saving}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-                {saving ? 'Guardando…' : 'Guardar'}
-              </button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
             </div>
           </div>
         </div>
@@ -1229,24 +879,18 @@ export default function LegionellaPage() {
   );
 }
 
-// Sub-components that load their own data to avoid the main component getting too complex
 function PurgaMensualTable({ month }: { month: number }) {
   const [data, setData] = useState<any[]>([]);
-  useEffect(() => {
-    supabase.from('legionella_purga_mensual').select('*').order('fecha').then(({ data }) => { if (data) setData(data); });
-  }, []);
+  useEffect(() => { supabase.from('legionella_purga_mensual').select('*').order('fecha').then(({ data }) => { if (data) setData(data); }); }, []);
   const filtered = data.filter(p => parseInt(p.fecha.slice(5,7)) === month);
   if (filtered.length === 0) return <div className="card" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Sin registros este mes</div>;
-  // Group by fecha
   const byFecha: Record<string, typeof filtered> = {};
   for (const p of filtered) { if (!byFecha[p.fecha]) byFecha[p.fecha] = []; byFecha[p.fecha].push(p); }
   return (
     <div className="card" style={{ overflow: 'hidden' }}>
       {Object.entries(byFecha).map(([fecha, rows]) => (
         <div key={fecha}>
-          <div style={{ padding: '8px 14px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: '12px', fontWeight: '700', color: '#0077cc' }}>
-            📅 {fecha} — {rows[0]?.nombre ?? '—'}
-          </div>
+          <div style={{ padding: '8px 14px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: '12px', fontWeight: '700', color: '#0077cc' }}>📅 {fecha} — {rows[0]?.nombre ?? '—'}</div>
           {rows.map(p => (
             <div key={p.id} style={{ padding: '8px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
               <span className="badge badge-ok" style={{ fontSize: '10px', flex: 'none' }}>✓</span>
@@ -1261,9 +905,7 @@ function PurgaMensualTable({ month }: { month: number }) {
 
 function TermometrosTable({ month }: { month: number }) {
   const [data, setData] = useState<any[]>([]);
-  useEffect(() => {
-    supabase.from('legionella_termometros_ramal').select('*').order('fecha').then(({ data }) => { if (data) setData(data); });
-  }, []);
+  useEffect(() => { supabase.from('legionella_termometros_ramal').select('*').order('fecha').then(({ data }) => { if (data) setData(data); }); }, []);
   const filtered = data.filter(t => parseInt(t.fecha.slice(5,7)) === month);
   if (filtered.length === 0) return <div className="card" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Sin registros este mes</div>;
   const byFecha: Record<string, typeof filtered> = {};
@@ -1272,9 +914,7 @@ function TermometrosTable({ month }: { month: number }) {
     <div className="card" style={{ overflow: 'hidden' }}>
       {Object.entries(byFecha).map(([fecha, rows]) => (
         <div key={fecha}>
-          <div style={{ padding: '8px 14px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: '12px', fontWeight: '700', color: '#c2410c' }}>
-            📅 {fecha} — {rows[0]?.nombre ?? '—'}
-          </div>
+          <div style={{ padding: '8px 14px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: '12px', fontWeight: '700', color: '#c2410c' }}>📅 {fecha} — {rows[0]?.nombre ?? '—'}</div>
           {rows.map(t => {
             const ok = t.temperatura != null && t.temperatura >= 50;
             return (
