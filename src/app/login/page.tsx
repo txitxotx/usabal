@@ -39,18 +39,18 @@ export default function LoginPage() {
             </svg>
             <div>
               <h1 style={{ color: '#fff', fontSize: '22px', fontWeight: '700', margin: 0, letterSpacing: '-0.02em' }}>Aqua Dashboard</h1>
-              <p style={{ color: '#7ab5dd', fontSize: '12px', margin: 0, fontWeight: '400' }}>Gestión de Instalaciones Acuáticas</p>
+              <p style={{ color: '#7ab5dd', fontSize: '12px', margin: 0, fontWeight: '400' }}>Ur instalakuntzen gestioa</p>
             </div>
           </div>
         </div>
 
         {/* Card */}
         <div className="card" style={{ padding: '32px', background: 'rgba(255,255,255,0.97)' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0f1f3d', marginBottom: '24px' }}>Iniciar sesión</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0f1f3d', marginBottom: '24px' }}>Saioa hasi</h2>
 
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Email</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Emaila</label>
               <input
                 className="input-field"
                 type="email"
@@ -61,7 +61,7 @@ export default function LoginPage() {
               />
             </div>
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Contraseña</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Pasahitza</label>
               <input
                 className="input-field"
                 type="password"
