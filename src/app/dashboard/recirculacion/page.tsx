@@ -14,10 +14,6 @@ const POOL_VOLUME: Record<string, number> = {
   'P. Ext. Grande': 641, 'P. Ext. Pequeña': 85, 'Splash': 5,
 };
 
-// Umbrales reales por normativa:
-// recircMin  → recirculación mínima diaria (m³/día)
-// renovadaMax → agua renovada máxima diaria (m³/día)
-// horasMin   → horas de filtraje mínimas al día
 const DELTA_WARN: Record<string, { recircMin: number; renovadaMax: number; horasMin: number }> = {
   'P. Grande':       { recircMin: 4700, renovadaMax: 75,  horasMin: 15 },
   'P. Peq.-Med.':   { recircMin: 950,  renovadaMax: 40,  horasMin: 15 },
@@ -28,8 +24,6 @@ const DELTA_WARN: Record<string, { recircMin: number; renovadaMax: number; horas
   'Splash':          { recircMin: 50,   renovadaMax: 15,  horasMin: 10 },
 };
 
-// isMin=true → alerta si valor < umbral (mínimo obligatorio)
-// isMin=false → alerta si valor > umbral (máximo permitido)
 function deltaClass(v: number | null, threshold: number, isMin: boolean) {
   if (v === null || v === undefined) return '';
   if (v < 0) return 'val-danger';
@@ -67,7 +61,7 @@ const EMPTY_FORM = {
 };
 
 export default function RecirculacionPage() {
-  const { hasPermission, recirculacion, activePools, addRecirculacion } = useApp();
+  const { hasPermission, recirculacion, activePools, addRecirculacion, deleteRecirculacion, currentUser } = useApp();
   const [selectedPool, setSelectedPool] = useState<string>(activePools[0] ?? 'P. Grande');
   const [tab, setTab] = useState<'resumen' | 'tabla'>('resumen');
   const [formOpen, setFormOpen] = useState(false);
@@ -79,6 +73,7 @@ export default function RecirculacionPage() {
   }
 
   const canEdit = hasPermission('edit_recirculacion');
+  const isAdmin = currentUser?.role === 'admin';
 
   const latestByPool: Record<string, typeof recirculacion[0]> = {};
   for (const e of recirculacion) {
@@ -318,8 +313,9 @@ export default function RecirculacionPage() {
               )}
 
               {(() => {
-                if (!d) return null;
-                const tr = calcTiempoRecirc(vol, d.deltaRecirc, d.deltaHoras);
+                const d2 = withDeltas[0];
+                if (!d2) return null;
+                const tr = calcTiempoRecirc(vol, d2.deltaRecirc, d2.deltaHoras);
                 if (tr === '—') return null;
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 16px', background: '#e6f4ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
@@ -346,6 +342,11 @@ export default function RecirculacionPage() {
       {/* Tabla histórico */}
       {tab === 'tabla' && (
         <div className="card" style={{ overflow: 'hidden' }}>
+          {isAdmin && (
+            <div style={{ padding: '9px 14px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', fontSize: '12px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🔑 <strong>Modo admin:</strong> Puedes borrar registros individuales con el botón de cada fila.
+            </div>
+          )}
           <div style={{ overflowX: 'auto', maxHeight: '600px', overflowY: 'auto' }}>
             <table className="data-table">
               <thead>
@@ -356,6 +357,7 @@ export default function RecirculacionPage() {
                   <th>Horas Filtraje</th><th>Δ Horas/día</th>
                   <th>Presión Filtros (bar)</th>
                   <th>Tº Recirculación</th>
+                  {isAdmin && <th style={{ width: '90px' }}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
@@ -374,6 +376,23 @@ export default function RecirculacionPage() {
                     <td style={{ fontFamily: 'var(--font-mono)', color: '#0077cc', fontWeight: '600' }}>
                       {calcTiempoRecirc(vol, e.deltaRecirc, e.deltaHoras)}
                     </td>
+                    {isAdmin && (
+                      <td>
+                        <button
+                          onClick={() => {
+                            if (confirm(`¿Borrar el registro del ${e.date}?`)) deleteRecirculacion(e.id);
+                          }}
+                          style={{
+                            background: 'none', border: '1px solid #fca5a5', borderRadius: '6px',
+                            color: '#dc2626', cursor: 'pointer', fontSize: '11px', padding: '3px 8px',
+                            fontWeight: '600',
+                          }}
+                          title="Borrar este registro"
+                        >
+                          🗑 Borrar
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
