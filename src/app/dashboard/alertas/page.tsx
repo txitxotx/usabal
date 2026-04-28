@@ -60,12 +60,65 @@ export default function AlertasPage() {
     'humedadRelativa', 'humedadGrande', 'humedadSpa', 'humedadPequena',
   ].includes(key);
 
+  // ── PDF reparaciones ──────────────────────────────────────────────────────
+  const handleDownloadRepairsPDF = () => {
+    const rows = alertRepairs.map(r => `
+      <tr>
+        <td>${r.parametroDate}</td>
+        <td>${r.parametroSession === 'morning' ? 'Mañana' : 'Tarde'}</td>
+        <td>${r.pool ?? '—'}</td>
+        <td>${PARAM_LABELS[r.parameterKey] ?? r.parameterKey}</td>
+        <td style="color:#dc2626;font-weight:600">${r.oldValue?.toFixed(2) ?? '—'}</td>
+        <td style="color:#15803d;font-weight:600">${r.newValue?.toFixed(2) ?? '—'}</td>
+        <td>${r.notes ?? 'Sin nota'}</td>
+        <td>${r.repairedBy ?? '—'}</td>
+        <td>${r.repairedAt ?? '—'}</td>
+      </tr>`).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<title>Reparaciones — Aqua Dashboard</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;margin:20px}
+  h1{font-size:18px;color:#0f1f3d;margin-bottom:4px}
+  .sub{color:#64748b;font-size:12px;margin-bottom:20px}
+  table{width:100%;border-collapse:collapse}
+  th{background:#0f1f3d;color:#fff;padding:8px 10px;text-align:left;font-size:11px}
+  td{padding:7px 10px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+  tr:nth-child(even) td{background:#f8fafc}
+  .footer{margin-top:20px;font-size:10px;color:#94a3b8}
+  @media print{button{display:none}}
+</style>
+</head>
+<body>
+<h1>📋 Registro de Reparaciones — Aqua Dashboard</h1>
+<div class="sub">Generado el ${new Date().toLocaleString('es-ES')} · Total: ${alertRepairs.length} registro(s)</div>
+<table>
+  <thead><tr>
+    <th>Fecha medición</th><th>Sesión</th><th>Piscina/Zona</th><th>Parámetro</th>
+    <th>Valor original</th><th>Valor corregido</th><th>Actuación</th><th>Corregido por</th><th>Fecha corrección</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="footer">Aqua Dashboard · Documento generado automáticamente para auditoría</div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win) {
+      win.onload = () => { win.print(); URL.revokeObjectURL(url); };
+    }
+  };
+
   const handleResolve = async () => {
     if (!resolveModal || !correctedValue.trim()) return;
     setSaving(true);
     try {
       const numVal = parseFloat(correctedValue);
-      // Para parámetros de ambiente no necesitamos pool (es un campo escalar en la fila)
       const needsPool = resolveModal.parameterKey && !isAmbientKey(resolveModal.parameterKey);
       const hasEnoughData = resolveModal.paramDate && resolveModal.paramSession && resolveModal.parameterKey;
       const poolOk = !needsPool || resolveModal.pool;
@@ -176,24 +229,28 @@ export default function AlertasPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
                       <strong style={{ fontSize: '14px', color: '#0f1f3d' }}>{a.message}</strong>
                       <span className={`badge ${a.type === 'danger' ? 'badge-danger' : 'badge-warning'}`}>{a.type === 'danger' ? 'Crítica' : 'Aviso'}</span>
-                      <span className="badge badge-gray">{SECTION_LABELS[a.section] || a.section}</span>
-                      {a.pool && <span className="badge badge-gray">🏊 {a.pool}</span>}
+                      {a.pool && <span className="badge badge-info">{a.pool}</span>}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                      {a.value !== undefined && <span>Valor: <strong style={{ color: '#dc2626' }}>{a.value}</strong></span>}
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: '#64748b' }}>
+                      {a.value && <span>Valor: <strong style={{ color: '#dc2626' }}>{a.value}</strong></span>}
                       {a.threshold && <span>Límite: <strong>{a.threshold}</strong></span>}
-                      <span>Fecha: {a.timestamp}</span>
-                      {a.paramDate && <span style={{ color: '#0077cc' }}>📅 Medición: {a.paramDate} · {a.paramSession === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</span>}
+                      <span>📅 {a.timestamp}</span>
+                      <span>{SECTION_LABELS[a.section] ?? a.section}</span>
                     </div>
                   </div>
-                  <button className="btn btn-primary btn-sm" onClick={() => {
-                    setResolveModal({ id: a.id, message: a.message, currentValue: a.value, pool: a.pool, paramDate: a.paramDate, paramSession: a.paramSession, parameterKey: a.parameterKey });
-                    setCorrectedValue('');
-                    setActionNotes('');
-                    setSaveRepair(true);
-                  }} style={{ flex: 'none', whiteSpace: 'nowrap' }}>
-                    🔧 Resolver
-                  </button>
+                  {hasPermission('edit_piscinas') && (
+                    <button
+                      className="btn btn-primary"
+                      style={{ fontSize: '12px', padding: '6px 14px', flex: 'none' }}
+                      onClick={() => setResolveModal({
+                        id: a.id, message: a.message,
+                        currentValue: a.value ? parseFloat(a.value) || a.value : undefined,
+                        pool: a.pool, paramDate: a.paramDate, paramSession: a.paramSession, parameterKey: a.parameterKey,
+                      })}
+                    >
+                      ✅ Resolver
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -204,7 +261,7 @@ export default function AlertasPage() {
       {/* ── HISTORIAL ── */}
       {tab === 'historico' && (
         <div>
-          {Object.keys(historyByPool).length === 0 ? (
+          {alertHistory.length === 0 ? (
             <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
               <p style={{ fontSize: '13px', color: '#94a3b8' }}>Sin historial de alertas resueltas</p>
             </div>
@@ -246,9 +303,26 @@ export default function AlertasPage() {
       {/* ── REPARACIONES ── */}
       {tab === 'reparaciones' && (
         <div>
-          <div style={{ marginBottom: '16px', padding: '12px 16px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '13px', color: '#1e40af' }}>
-            <strong>📋 Trazabilidad de correcciones:</strong> Registro de todas las mediciones corregidas al resolver una alerta. El valor original queda guardado para auditoría.
+          {/* Header con botón PDF */}
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ padding: '12px 16px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '13px', color: '#1e40af', flex: 1 }}>
+              <strong>📋 Trazabilidad de correcciones:</strong> Registro de todas las mediciones corregidas al resolver una alerta. El valor original queda guardado para auditoría.
+            </div>
+            {alertRepairs.length > 0 && (
+              <button
+                onClick={handleDownloadRepairsPDF}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '10px 16px', background: '#dc2626', border: 'none',
+                  borderRadius: '8px', color: '#fff', cursor: 'pointer',
+                  fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap',
+                }}
+              >
+                📄 Descargar PDF
+              </button>
+            )}
           </div>
+
           {alertRepairs.length === 0 ? (
             <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
               <p style={{ fontSize: '13px', color: '#94a3b8' }}>No se han registrado reparaciones con valor corregido</p>
@@ -269,15 +343,13 @@ export default function AlertasPage() {
                         <td>{r.parametroSession === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</td>
                         <td style={{ fontWeight: '600' }}>{r.pool ?? '—'}</td>
                         <td style={{ fontSize: '12px' }}>{PARAM_LABELS[r.parameterKey] ?? r.parameterKey}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)', color: '#dc2626', fontWeight: '600' }}>{r.oldValue?.toFixed(3) ?? '—'}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)', color: '#15803d', fontWeight: '600' }}>{r.newValue?.toFixed(3) ?? '—'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: '#dc2626', fontWeight: '600' }}>{r.oldValue?.toFixed(2) ?? '—'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: '#15803d', fontWeight: '600' }}>{r.newValue?.toFixed(2) ?? '—'}</td>
                         <td style={{ maxWidth: '220px', fontSize: '12px', color: r.notes ? '#0f1f3d' : '#94a3b8', fontStyle: r.notes ? 'normal' : 'italic' }}>
                           {r.notes ?? 'Sin nota'}
                         </td>
-                        <td>{r.repairedBy}</td>
-                        <td style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: '11px' }}>
-                          {new Date(r.repairedAt).toLocaleDateString('es-ES')} {new Date(r.repairedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                        </td>
+                        <td>{r.repairedBy ?? '—'}</td>
+                        <td style={{ whiteSpace: 'nowrap', color: '#64748b' }}>{r.repairedAt ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -288,27 +360,27 @@ export default function AlertasPage() {
         </div>
       )}
 
-      {/* ── MODAL RESOLUCIÓN ── */}
+      {/* ── MODAL RESOLVER ── */}
       {resolveModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="card" style={{ padding: '28px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#0f1f3d', marginBottom: '6px' }}>🔧 Resolver incidencia</h2>
-            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>{resolveModal.message}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#0f1f3d', margin: 0 }}>✅ Resolver incidencia</h2>
+              <button onClick={() => { setResolveModal(null); setActionNotes(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#94a3b8' }}>×</button>
+            </div>
 
-            {/* Info del registro afectado */}
-            {resolveModal.paramDate && (
-              <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: '8px', marginBottom: '16px', fontSize: '12px' }}>
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                  {resolveModal.pool && <span><strong>Piscina/Zona:</strong> {resolveModal.pool}</span>}
-                  <span><strong>Fecha medición:</strong> {resolveModal.paramDate}</span>
-                  <span><strong>Sesión:</strong> {resolveModal.paramSession === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</span>
-                  {resolveModal.parameterKey && <span><strong>Parámetro:</strong> {PARAM_LABELS[resolveModal.parameterKey] ?? resolveModal.parameterKey}</span>}
-                  {resolveModal.currentValue !== undefined && (
-                    <span><strong style={{ color: '#dc2626' }}>Valor anómalo:</strong> <span style={{ color: '#dc2626', fontWeight: '700' }}>{resolveModal.currentValue}</span></span>
-                  )}
-                </div>
+            {/* Info de la alerta */}
+            <div style={{ marginBottom: '20px', padding: '14px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
+              <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: '700', color: '#dc2626' }}>{resolveModal.message}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#64748b' }}>
+                {resolveModal.pool && <span><strong>Piscina:</strong> {resolveModal.pool}</span>}
+                {resolveModal.paramDate && <span><strong>Fecha:</strong> {resolveModal.paramDate} · {resolveModal.paramSession === 'morning' ? '☀ Mañana' : '🌆 Tarde'}</span>}
+                {resolveModal.parameterKey && <span><strong>Parámetro:</strong> {PARAM_LABELS[resolveModal.parameterKey] ?? resolveModal.parameterKey}</span>}
+                {resolveModal.currentValue !== undefined && (
+                  <span><strong style={{ color: '#dc2626' }}>Valor anómalo:</strong> <span style={{ color: '#dc2626', fontWeight: '700' }}>{resolveModal.currentValue}</span></span>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Valor corregido */}
             <div style={{ marginBottom: '16px' }}>
@@ -345,7 +417,7 @@ export default function AlertasPage() {
                 rows={3}
                 value={actionNotes}
                 onChange={e => setActionNotes(e.target.value)}
-                placeholder="Describe la actuación realizada para resolver la incidencia (ej: Se ajustó el clorador automático, se comprobó el sensor de humedad, se renovó el agua...)"
+                placeholder="Describe la actuación realizada para resolver la incidencia..."
                 style={{ resize: 'vertical', fontSize: '13px' }}
               />
               <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8' }}>Esta nota aparecerá en el historial y en el registro de reparaciones.</p>
