@@ -7,20 +7,19 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 export default function ContadoresPage() {
-  const { hasPermission, contadores, addContador } = useApp();
+  const { hasPermission, contadores, addContador, deleteContador, currentUser } = useApp();
   const [selectedMonth, setSelectedMonth] = useState(0);
   const [tab, setTab] = useState<'graficos' | 'tabla'>('graficos');
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // El formulario ahora pide la LECTURA ACUMULADA del contador
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     accesos: '',
     tempExterior: '',
-    aguaGeneral: '',    // lectura acumulada del contador
-    gas: '',            // lectura acumulada del contador
-    aguaPiscinas: '',   // lectura acumulada del contador
+    aguaGeneral: '',
+    gas: '',
+    aguaPiscinas: '',
     kwTolargi: '',
   });
 
@@ -29,6 +28,7 @@ export default function ContadoresPage() {
   }
 
   const canEdit = hasPermission('edit_contadores');
+  const isAdmin = currentUser?.role === 'admin';
 
   const filtered = useMemo(() => {
     if (!selectedMonth) return contadores;
@@ -70,8 +70,6 @@ export default function ContadoresPage() {
     if (!form.date) return;
     setSaving(true);
     try {
-      // ── LÓGICA DIFERENCIA AUTOMÁTICA ────────────────────────────────────────
-      // Buscar el registro anterior más reciente (ordenado por fecha desc)
       const sortedDesc = [...contadores].sort((a, b) => b.date.localeCompare(a.date));
       const anterior = sortedDesc.find(c => c.date < form.date);
 
@@ -79,7 +77,6 @@ export default function ContadoresPage() {
       const acumGas       = form.gas           ? parseFloat(form.gas)           : null;
       const acumPiscinas  = form.aguaPiscinas  ? parseFloat(form.aguaPiscinas)  : null;
 
-      // Diferencia = lectura hoy - lectura anterior. Si no hay anterior → 0
       const diarioGeneral  = acumGeneral  != null && anterior != null && anterior.aguaGeneral  > 0
         ? Math.max(0, Math.round((acumGeneral  - anterior.aguaGeneral)  * 100) / 100)
         : acumGeneral != null ? 0 : 0;
@@ -113,7 +110,6 @@ export default function ContadoresPage() {
     }
   };
 
-  // Calcular el último registro para mostrar info del contador en el modal
   const sortedDesc = [...contadores].sort((a, b) => b.date.localeCompare(a.date));
   const ultimoRegistro = sortedDesc[0];
 
@@ -167,47 +163,47 @@ export default function ContadoresPage() {
         ))}
       </div>
 
+      {/* Gráficos */}
       {tab === 'graficos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="card" style={{ padding: '20px' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Accesos diarios</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartData} margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
+            <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Agua diaria (m³)</h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={50} tickFormatter={v => v.toLocaleString()} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={50} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="accesos" fill="#7c3aed" radius={[3, 3, 0, 0]} name="Accesos" />
+                <Bar dataKey="agua" fill="#0057a8" radius={[3,3,0,0]} name="Agua Gral." />
+                <Bar dataKey="piscinas" fill="#0f6e56" radius={[3,3,0,0]} name="Agua Pisc." />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="card" style={{ padding: '20px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Agua diaria (m³)</h3>
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={40} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="agua"     stroke="#0057a8" dot={false} strokeWidth={2} name="Agua General m³" />
-                  <Line type="monotone" dataKey="piscinas" stroke="#0f6e56" dot={false} strokeWidth={2} name="Agua Piscinas m³" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="card" style={{ padding: '20px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Gas diario (m³)</h3>
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={40} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="gas" stroke="#b45309" dot={false} strokeWidth={2} name="Gas m³" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+          <div className="card" style={{ padding: '20px' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Gas diario (m³)</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={50} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line type="monotone" dataKey="gas" stroke="#b45309" dot={false} strokeWidth={2} name="Gas" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="card" style={{ padding: '20px' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Accesos diarios</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={50} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="accesos" fill="#7c3aed" radius={[3,3,0,0]} name="Accesos" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
 
           <div className="card" style={{ padding: '20px' }}>
@@ -225,8 +221,14 @@ export default function ContadoresPage() {
         </div>
       )}
 
+      {/* Tabla */}
       {tab === 'tabla' && (
         <div className="card" style={{ overflow: 'hidden' }}>
+          {isAdmin && (
+            <div style={{ padding: '9px 14px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', fontSize: '12px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🔑 <strong>Modo admin:</strong> Puedes borrar registros individuales con el botón de cada fila.
+            </div>
+          )}
           <div style={{ overflowX: 'auto', maxHeight: '600px', overflowY: 'auto' }}>
             <table className="data-table">
               <thead>
@@ -241,14 +243,15 @@ export default function ContadoresPage() {
                   <th>Agua Pisc. — Contador</th>
                   <th>Agua Pisc. — Día (m³)</th>
                   <th>kW Tolargi</th>
+                  {isAdmin && <th style={{ width: '90px' }}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
                 {[...filtered].reverse().map(e => (
                   <tr key={e.id}>
                     <td>{e.date}</td>
-                    <td>{e.accesos?.toLocaleString('es-ES') ?? '—'}</td>
-                    <td>{e.tempExterior} °C</td>
+                    <td style={{ fontWeight: '600', color: '#7c3aed' }}>{e.accesos?.toLocaleString('es-ES') ?? '—'}</td>
+                    <td>{e.tempExterior != null ? `${e.tempExterior}°C` : '—'}</td>
                     <td style={{ color: '#94a3b8', fontSize: '12px' }}>{e.aguaGeneral?.toLocaleString('es-ES') ?? '—'}</td>
                     <td style={{ fontWeight: '600', color: '#0057a8' }}>{e.aguaGeneralDiario ?? '—'}</td>
                     <td style={{ color: '#94a3b8', fontSize: '12px' }}>{e.gas?.toLocaleString('es-ES') ?? '—'}</td>
@@ -256,6 +259,23 @@ export default function ContadoresPage() {
                     <td style={{ color: '#94a3b8', fontSize: '12px' }}>{e.aguaPiscinas?.toLocaleString('es-ES') ?? '—'}</td>
                     <td style={{ fontWeight: '600', color: '#0f6e56' }}>{e.aguaPiscinasDiario ?? '—'}</td>
                     <td style={{ fontWeight: '600', color: '#c2410c' }}>{e.kwTolargi ?? '—'}</td>
+                    {isAdmin && (
+                      <td>
+                        <button
+                          onClick={() => {
+                            if (confirm(`¿Borrar el registro del ${e.date}?`)) deleteContador(e.id);
+                          }}
+                          style={{
+                            background: 'none', border: '1px solid #fca5a5', borderRadius: '6px',
+                            color: '#dc2626', cursor: 'pointer', fontSize: '11px', padding: '3px 8px',
+                            fontWeight: '600',
+                          }}
+                          title="Borrar este registro"
+                        >
+                          🗑 Borrar
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -264,7 +284,7 @@ export default function ContadoresPage() {
         </div>
       )}
 
-      {/* Modal — ahora pide lectura acumulada del contador */}
+      {/* Modal — pide lectura acumulada del contador */}
       {formOpen && canEdit && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="card" style={{ padding: '28px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -273,7 +293,6 @@ export default function ContadoresPage() {
               <button onClick={() => setFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#94a3b8' }}>×</button>
             </div>
 
-            {/* Info último registro */}
             {ultimoRegistro && (
               <div style={{ marginBottom: '16px', padding: '12px 14px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '12px' }}>
                 <p style={{ margin: '0 0 4px', fontWeight: '700', color: '#0057a8' }}>📅 Último registro: {ultimoRegistro.date}</p>
@@ -282,72 +301,32 @@ export default function ContadoresPage() {
                   <span>Gas: <strong>{ultimoRegistro.gas?.toLocaleString('es-ES')} m³</strong></span>
                   <span>Agua Pisc.: <strong>{ultimoRegistro.aguaPiscinas?.toLocaleString('es-ES')} m³</strong></span>
                 </div>
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#64748b' }}>La diferencia diaria se calculará automáticamente restando estos valores a los que introduzcas hoy.</p>
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              {/* Fecha — ocupa 2 columnas */}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Fecha</label>
-                <input className="input-field" type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Accesos</label>
-                <input className="input-field" type="number" value={form.accesos} onChange={e => setForm(p => ({ ...p, accesos: e.target.value }))} placeholder="Nº entradas" />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '5px' }}>Tª Exterior (°C)</label>
-                <input className="input-field" type="number" step="0.1" value={form.tempExterior} onChange={e => setForm(p => ({ ...p, tempExterior: e.target.value }))} placeholder="ej. 18" />
-              </div>
-
-              {/* Contadores acumulados — sección destacada */}
-              <div style={{ gridColumn: '1 / -1', marginTop: '4px' }}>
-                <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '700', color: '#0f1f3d' }}>📟 Lectura de contadores (valor acumulado)</p>
-                <p style={{ margin: '0 0 12px', fontSize: '11px', color: '#64748b' }}>Introduce la lectura actual del contador. La diferencia con el registro anterior se calculará automáticamente.</p>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#0057a8', marginBottom: '5px' }}>💧 Agua General (m³ acumulados)</label>
-                <input className="input-field" type="number" step="0.01" value={form.aguaGeneral} onChange={e => setForm(p => ({ ...p, aguaGeneral: e.target.value }))} placeholder={ultimoRegistro ? `anterior: ${ultimoRegistro.aguaGeneral?.toLocaleString('es-ES')}` : 'ej. 12450'} style={{ borderColor: '#bfdbfe' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#b45309', marginBottom: '5px' }}>🔥 Gas (m³ acumulados)</label>
-                <input className="input-field" type="number" step="0.01" value={form.gas} onChange={e => setForm(p => ({ ...p, gas: e.target.value }))} placeholder={ultimoRegistro ? `anterior: ${ultimoRegistro.gas?.toLocaleString('es-ES')}` : 'ej. 8320'} style={{ borderColor: '#fed7aa' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#0f6e56', marginBottom: '5px' }}>🏊 Agua Piscinas (m³ acumulados)</label>
-                <input className="input-field" type="number" step="0.01" value={form.aguaPiscinas} onChange={e => setForm(p => ({ ...p, aguaPiscinas: e.target.value }))} placeholder={ultimoRegistro ? `anterior: ${ultimoRegistro.aguaPiscinas?.toLocaleString('es-ES')}` : 'ej. 3210'} style={{ borderColor: '#a7f3d0' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#c2410c', marginBottom: '5px' }}>⚡ kW Tolargi (kWh del día)</label>
-                <input className="input-field" type="number" step="0.01" value={form.kwTolargi} onChange={e => setForm(p => ({ ...p, kwTolargi: e.target.value }))} placeholder="ej. 450" style={{ borderColor: '#fed7aa' }} />
-              </div>
-            </div>
-
-            {/* Preview de diferencias si el usuario ya introdujo valores */}
-            {ultimoRegistro && (form.aguaGeneral || form.gas || form.aguaPiscinas) && (
-              <div style={{ marginTop: '16px', padding: '12px 14px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0', fontSize: '12px' }}>
-                <p style={{ margin: '0 0 6px', fontWeight: '700', color: '#15803d' }}>✓ Diferencia diaria que se guardará:</p>
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                  {form.aguaGeneral && (
-                    <span style={{ color: '#0057a8' }}>Agua Gral: <strong>{Math.max(0, Math.round((parseFloat(form.aguaGeneral) - (ultimoRegistro.aguaGeneral || 0)) * 100) / 100)} m³</strong></span>
-                  )}
-                  {form.gas && (
-                    <span style={{ color: '#b45309' }}>Gas: <strong>{Math.max(0, Math.round((parseFloat(form.gas) - (ultimoRegistro.gas || 0)) * 100) / 100)} m³</strong></span>
-                  )}
-                  {form.aguaPiscinas && (
-                    <span style={{ color: '#0f6e56' }}>Agua Pisc.: <strong>{Math.max(0, Math.round((parseFloat(form.aguaPiscinas) - (ultimoRegistro.aguaPiscinas || 0)) * 100) / 100)} m³</strong></span>
-                  )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                { key: 'date', label: 'Fecha', type: 'date', placeholder: '' },
+                { key: 'accesos', label: 'Accesos (personas)', type: 'number', placeholder: 'Nº de entradas del día' },
+                { key: 'tempExterior', label: 'Temperatura exterior (°C)', type: 'number', placeholder: 'ej. 18.5' },
+                { key: 'aguaGeneral', label: 'Agua General — Lectura contador (m³)', type: 'number', placeholder: 'Lectura acumulada actual' },
+                { key: 'gas', label: 'Gas — Lectura contador (m³)', type: 'number', placeholder: 'Lectura acumulada actual' },
+                { key: 'aguaPiscinas', label: 'Agua Piscinas — Lectura contador (m³)', type: 'number', placeholder: 'Lectura acumulada actual' },
+                { key: 'kwTolargi', label: 'kW Tolargi', type: 'number', placeholder: 'Consumo del día' },
+              ].map(({ key, label, type, placeholder }) => (
+                <div key={key}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>{label}</label>
+                  <input
+                    type={type}
+                    step={type === 'number' ? '0.01' : undefined}
+                    className="input-field"
+                    placeholder={placeholder}
+                    value={(form as any)[key]}
+                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                  />
                 </div>
-              </div>
-            )}
-
+              ))}
+            </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
               <button className="btn btn-secondary" onClick={() => setFormOpen(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
