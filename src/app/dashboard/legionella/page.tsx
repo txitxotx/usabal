@@ -410,7 +410,7 @@ export default function LegionellaPage() {
       } else if (formType === 'turbidez_sem') {
         const m = parseInt(fMonth); const w = parseInt(fWeek);
         const id = `ts${currentYear}${m.toString().padStart(2,'0')}${w}`;
-        await supabase.from('legionella_turbidez_semanal').upsert({ id, year: currentYear, month: m, week: w, turbidez: parseFloat(fTurbidez)||null, punto_medida: fPunto||null, nombre: fNombre||null });
+        await supabase.from('legionella_turbidez_semanal').upsert({ id, year: currentYear, month: m, week: w, turbidez: fTurbidez !== '' ? parseFloat(fTurbidez) : null, punto_medida: fPunto||null, nombre: fNombre||null });
         const { data } = await supabase.from('legionella_turbidez_semanal').select('*').order('year').order('month').order('week');
         if (data) setTurbidezSemanal(data);
       } else if (formType === 'purga_men') {
@@ -769,7 +769,7 @@ export default function LegionellaPage() {
               </h2>
               <button onClick={() => setFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#94a3b8' }}>×</button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div key={formType} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {formType === 'temp' && (<>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Fecha</label><input className="input-field" type="date" value={fDate} onChange={e => setFDate(e.target.value)} /></div>
