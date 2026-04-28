@@ -42,13 +42,11 @@ function valueClassPool(v: number | null | undefined, key: string, pool: string)
   return '';
 }
 
-// ─── PDF Export ────────────────────────────────────────────────────────────────
-// Zona de ambiente según piscina seleccionada
 function getAmbZone(pool: string): 'grande' | 'pequena' | 'spa' | null {
   if (pool === 'todas' || pool === 'P. Grande') return 'grande';
   if (pool === 'P. Peq.-Med.') return 'pequena';
   if (pool === 'SPA') return 'spa';
-  return 'grande'; // default para exteriores/pileta
+  return 'grande';
 }
 
 function exportPDF(parametros: any[], pool: PoolName | 'todas', activePools: PoolName[]) {
@@ -61,11 +59,9 @@ function exportPDF(parametros: any[], pool: PoolName | 'todas', activePools: Poo
   const clr = (v: number | null | undefined, min: number, max: number) =>
     v == null ? '#888' : (v < min || v > max) ? '#dc2626' : '#15803d';
 
-  // Single combined table: water params + ambient zone + co2
   const tableRows = [...parametros].reverse().flatMap(rec =>
     poolsToShow.map(p => {
       const tr = getTempRange(p);
-      // Pick the right ambient zone
       let ta: number | null = null, hr: number | null = null;
       const z = pool === 'todas' ? getAmbZone(p) : zone;
       if (z === 'grande')  { ta = rec.params.tempAmbienteGrande ?? rec.params.tempAmbiente; hr = rec.params.humedadGrande ?? rec.params.humedadRelativa; }
@@ -129,47 +125,40 @@ body{font-family:'Source Sans 3',sans-serif;font-size:10pt;color:#1a1a2e;-webkit
 .threshold-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;border-left:3px solid}
 .tc-pool{font-size:8pt;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .tc-params{font-size:9pt;line-height:1.8;color:#334155}
-table{width:100%;border-collapse:collapse;font-size:8pt;page-break-inside:auto}
-thead{display:table-header-group}tr{page-break-inside:avoid}
-th{background:#0f1f3d;color:#fff;padding:7px 8px;text-align:left;font-size:7pt;font-weight:600;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:16px}
+th{background:#0f1f3d;color:#fff;padding:7px 8px;text-align:left;font-size:7.5pt;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 td{padding:6px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 tr:nth-child(even) td{background:#fafbfc}
-.legend{display:flex;gap:16px;align-items:center;margin-bottom:14px;padding:8px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
-.legend-item{display:flex;align-items:center;gap:6px;font-size:8pt;color:#475569}
-.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
-.page-footer{position:fixed;bottom:0;left:16mm;right:16mm;height:14mm;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;font-size:7pt;color:#94a3b8}
-</style></head><body>
+</style>
+</head>
+<body>
 <div class="cover">
-  <div class="cover-logo-area"><div class="cover-logo">Aqua<span>Dash</span></div><div class="cover-badge">Documento oficial</div></div>
+  <div class="cover-logo-area">
+    <div class="cover-logo">Aqua<span>Dash</span></div>
+    <div class="cover-badge">Documento oficial</div>
+  </div>
   <div class="cover-title-area">
-    <div class="cover-eyebrow">Registro de control de calidad</div>
-    <div class="cover-title">Calidad del Agua<br>en Instalaciones<br>Acuáticas</div>
+    <div class="cover-eyebrow">Control de instalaciones acuáticas</div>
+    <h1 class="cover-title">Registro de Calidad del Agua</h1>
+    <p class="cover-subtitle">Parámetros fisicoquímicos de piscinas · ${pool === 'todas' ? 'Todas las instalaciones' : pool}</p>
     <div class="cover-divider"></div>
-    <div class="cover-subtitle">Registro oficial de parámetros fisicoquímicos conforme al Real Decreto 742/2013 y normativa del País Vasco.</div>
   </div>
   <div class="cover-meta-grid">
-    <div class="cover-meta-item"><label>Instalación</label><p>${pool === 'todas' ? 'Todas las piscinas' : pool}</p></div>
     <div class="cover-meta-item"><label>Período</label><p>${period}</p></div>
-    <div class="cover-meta-item"><label>Fecha de emisión</label><p>${today}</p></div>
+    <div class="cover-meta-item"><label>Instalación</label><p>${pool === 'todas' ? 'Todas las piscinas' : pool}</p></div>
+    <div class="cover-meta-item"><label>Generado</label><p>${today}</p></div>
   </div>
   <div class="cover-footer">
-    <div class="cover-footer-text">Generado por <strong>AquaDash</strong></div>
-    <div class="cover-legal">Documento emitido electrónicamente. Datos registrados por personal cualificado.</div>
+    <span class="cover-footer-text">AquaDash · Sistema de Gestión de Instalaciones Acuáticas</span>
+    <span class="cover-legal">Registro oficial conforme al Real Decreto 742/2013</span>
   </div>
 </div>
 
-<div class="page-footer"><span><strong>AquaDash</strong> — ${pool === 'todas' ? 'Todas las piscinas' : pool}</span><span>Período: ${period} · Emitido: ${today}</span></div>
-
-<div class="section-header"><div class="section-title">Umbrales de referencia</div><div class="section-period">RD 742/2013</div></div>
-<div class="threshold-grid">${thresholdCards}</div>
-
-<div class="legend">
-  <span style="font-size:8pt;font-weight:600;color:#334155;margin-right:8px">Leyenda:</span>
-  <div class="legend-item"><div class="legend-dot" style="background:#15803d"></div>Conforme</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>Fuera de rango</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#888"></div>Sin dato</div>
+<div class="section-header">
+  <div class="section-title">Umbrales de control por instalación</div>
   ${pool !== 'todas' ? `<span style="font-size:8pt;color:#475569;margin-left:8px">Datos ambientales: zona <strong>${zoneLabel}</strong></span>` : ''}
 </div>
+<div class="threshold-grid">${thresholdCards}</div>
 
 <div class="section-header"><div class="section-title">Registro de mediciones</div><div class="section-period">Período: ${period}</div></div>
 <table>
@@ -207,9 +196,10 @@ tr:nth-child(even) td{background:#fafbfc}
   const win = window.open(url, '_blank');
   if (win) win.onload = () => { setTimeout(() => { win.print(); URL.revokeObjectURL(url); }, 800); };
 }
+
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function PiscinasPage() {
-  const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser, updateParamValue, updateParamSession } = useApp();
+  const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser, updateParamValue, updateParamSession, deleteParametro } = useApp();
   const [selectedPool, setSelectedPool] = useState<string>('P. Grande');
   const [selectedParam, setSelectedParam] = useState<string>('cloroLibre');
   const [tab, setTab] = useState<'resumen' | 'ambiente' | 'graficos' | 'tabla'>('resumen');
@@ -218,9 +208,8 @@ export default function PiscinasPage() {
   const [pdfModal, setPdfModal] = useState(false);
   const [pdfPool, setPdfPool] = useState<PoolName | 'todas'>('todas');
   const [saving, setSaving] = useState(false);
-  // Edición inline (solo admin) — sin onBlur para no salir al hacer clic
   const [editingCell, setEditingCell] = useState<{ date: string; session: string; pool: string; param: string } | null>(null);
-  const [editingSession, setEditingSession] = useState<string | null>(null); // rec.id de la fila cuya sesión se edita
+  const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editCellValue, setEditCellValue] = useState('');
 
   const handleCellEdit = (date: string, session: string, pool: string, param: string, currentVal: number | null) => {
@@ -237,7 +226,6 @@ export default function PiscinasPage() {
     setEditingCell(null);
   };
 
-  // Form refs
   const dateRef = useRef<HTMLInputElement>(null);
   const sessionRef = useRef<HTMLSelectElement>(null);
   const taGrandeRef = useRef<HTMLInputElement>(null);
@@ -248,7 +236,6 @@ export default function PiscinasPage() {
   const hPequenaRef = useRef<HTMLInputElement>(null);
   const co2IntRef = useRef<HTMLInputElement>(null);
   const co2ExtRef = useRef<HTMLInputElement>(null);
-  // Per-pool param refs: { pool: { param: ref } }
   const poolRefs = useRef<Record<string, Record<string, React.RefObject<HTMLInputElement>>>>({});
 
   if (!hasPermission('view_piscinas')) {
@@ -257,8 +244,6 @@ export default function PiscinasPage() {
 
   const canEdit = hasPermission('edit_piscinas');
   const isAdmin = currentUser?.role === 'admin';
-
-  // BASE_POOLS siempre visibles + temporada solo si activa
   const visiblePools = activePools;
 
   const filteredParametros = useMemo(() =>
@@ -284,7 +269,6 @@ export default function PiscinasPage() {
 
   const poolAlerts = alerts.filter(a => a.section === 'piscinas' && !a.resolved);
 
-  // Init pool refs
   visiblePools.forEach(pool => {
     if (!poolRefs.current[pool]) {
       poolRefs.current[pool] = {};
@@ -423,7 +407,7 @@ export default function PiscinasPage() {
         ))}
       </div>
 
-      {/* ── RESUMEN: solo piscinas activas ── */}
+      {/* ── RESUMEN ── */}
       {tab === 'resumen' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
           {visiblePools.map(pool => {
@@ -458,11 +442,11 @@ export default function PiscinasPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {[
-                    { label: 'Cloro libre', val: cl, min: 0.5, max: 2.0, unit: 'mg/L' },
-                    { label: 'Cloro comb.', val: cc, min: 0, max: 0.6, unit: 'mg/L' },
-                    { label: 'pH', val: ph, min: 7.2, max: 7.8, unit: '' },
+                    { label: 'Cloro libre', val: cl,   min: 0.5, max: 2.0, unit: 'mg/L' },
+                    { label: 'Cloro comb.', val: cc,   min: 0,   max: 0.6, unit: 'mg/L' },
+                    { label: 'pH',          val: ph,   min: 7.2, max: 7.8, unit: '' },
                     { label: 'Temperatura', val: temp, min: tr.min, max: tr.max, unit: '°C' },
-                    { label: 'Turbidez', val: turb, min: 0, max: 5.0, unit: 'NTU' },
+                    { label: 'Turbidez',    val: turb, min: 0,   max: 5.0, unit: 'NTU' },
                   ].map(({ label, val, min, max, unit }) => (
                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>{label}</span>
@@ -501,25 +485,25 @@ export default function PiscinasPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>Temp. ambiente</span>
-                      <span className={valueClass(ta, 26, 33)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{ta?.toFixed(1) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>°C</span></span>
+                      <span className={valueClass(ta, 26, 33)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{ta?.toFixed(1) ?? '—'} °C</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>Humedad relativa</span>
-                      <span className={valueClass(hr, 50, 70)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{hr?.toFixed(1) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>%</span></span>
+                      <span className={valueClass(hr, 50, 70)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{hr?.toFixed(1) ?? '—'} %</span>
                     </div>
                   </div>
                 </div>
               ))}
-              <div className="card" style={{ padding: '18px', borderTop: '3px solid #84cc16' }}>
-                <h3 style={{ margin: '0 0 14px', fontSize: '13px', fontWeight: '700', color: '#0f1f3d' }}>💨 CO₂</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b' }}>Interior</span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{lastAmb?.params.co2Interior?.toFixed(0) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b' }}>Exterior</span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{lastAmb?.params.co2Exterior?.toFixed(0) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>ΔCO₂</span><span className={co2Delta != null ? (co2Delta > 500 ? 'val-danger' : 'val-ok') : ''} style={{ fontFamily: 'var(--font-mono)', fontWeight: '700' }}>{co2Delta ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
-                </div>
+            </div>
+            <div className="card" style={{ padding: '18px', maxWidth: '400px' }}>
+              <h3 style={{ margin: '0 0 14px', fontSize: '13px', fontWeight: '700', color: '#0f1f3d' }}>💨 CO₂</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Interior</span><span style={{ fontFamily: 'var(--font-mono)' }}>{lastAmb?.params.co2Interior?.toFixed(0) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Exterior</span><span style={{ fontFamily: 'var(--font-mono)' }}>{lastAmb?.params.co2Exterior?.toFixed(0) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>ΔCO₂</span><span className={co2Delta != null ? (co2Delta > 500 ? 'val-danger' : 'val-ok') : ''} style={{ fontFamily: 'var(--font-mono)', fontWeight: '700' }}>{co2Delta ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
               </div>
             </div>
-            <div className="card" style={{ overflow: 'hidden' }}>
+            <div className="card" style={{ overflow: 'hidden', marginTop: '20px' }}>
               <div style={{ overflowX: 'auto', maxHeight: '500px', overflowY: 'auto' }}>
                 <table className="data-table">
                   <thead><tr>
@@ -594,7 +578,7 @@ export default function PiscinasPage() {
         </div>
       )}
 
-      {/* ── TABLA: con selector de piscina ── */}
+      {/* ── TABLA ── */}
       {tab === 'tabla' && (
         <div>
           <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -605,7 +589,7 @@ export default function PiscinasPage() {
           </div>
           {isAdmin && (
             <div style={{ marginBottom: '10px', padding: '9px 14px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', fontSize: '12px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              ✏️ <strong>Modo admin:</strong> Haz clic en un valor para editarlo. Escribe el nuevo valor y pulsa <strong>Enter</strong> para guardar o <strong>Escape</strong> para cancelar.
+              ✏️ <strong>Modo admin:</strong> Haz clic en un valor para editarlo. Pulsa <strong>Enter</strong> para guardar o <strong>Escape</strong> para cancelar. Usa 🗑 para borrar una fila completa.
             </div>
           )}
           <div className="card" style={{ overflow: 'hidden' }}>
@@ -616,6 +600,7 @@ export default function PiscinasPage() {
                     <th>Fecha</th><th>Sesión</th>
                     <th>Cl. Libre (mg/L)</th><th>Cl. Comb. (mg/L)</th>
                     <th>pH</th><th>Temperatura (°C)</th><th>Turbidez (NTU)</th>
+                    {isAdmin && <th style={{ width: '90px' }}>Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -692,6 +677,24 @@ export default function PiscinasPage() {
                         {cell('ph',             rec.params.ph[selectedPool as PoolName],             valueClassPool(rec.params.ph[selectedPool as PoolName], 'ph', selectedPool),                       2)}
                         {cell('temperatura',    rec.params.temperatura[selectedPool as PoolName],    valueClass(rec.params.temperatura[selectedPool as PoolName], tr.min, tr.max),                       1)}
                         {cell('turbidez',       rec.params.turbidez[selectedPool as PoolName],       valueClassPool(rec.params.turbidez[selectedPool as PoolName], 'turbidez', selectedPool),           2)}
+                        {isAdmin && (
+                          <td>
+                            <button
+                              onClick={() => {
+                                const sesion = rec.session === 'morning' ? 'Mañana' : 'Tarde';
+                                if (confirm(`¿Borrar el registro del ${rec.date} (${sesion})?`)) deleteParametro(rec.id);
+                              }}
+                              style={{
+                                background: 'none', border: '1px solid #fca5a5', borderRadius: '6px',
+                                color: '#dc2626', cursor: 'pointer', fontSize: '11px', padding: '3px 8px',
+                                fontWeight: '600',
+                              }}
+                              title="Borrar este registro"
+                            >
+                              🗑 Borrar
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -768,7 +771,7 @@ export default function PiscinasPage() {
             </div>
 
             {/* Ambiente zona Pequeña */}
-            <div style={{ marginBottom: '14px', padding: '14px', background: '#e6fff8', borderRadius: '8px', borderLeft: '3px solid #0f6e56' }}>
+            <div style={{ marginBottom: '14px', padding: '14px', background: '#f0fdf4', borderRadius: '8px', borderLeft: '3px solid #0f6e56' }}>
               <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '600', color: '#0f1f3d' }}>🏊 Zona P. Pequeña — Ambiente</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>Temp. ambiente (°C)</label><input ref={taPequenaRef} className="input-field" type="number" step="0.1" placeholder="26–33" style={{ fontSize: '13px' }} /></div>
@@ -777,11 +780,11 @@ export default function PiscinasPage() {
             </div>
 
             {/* CO2 */}
-            <div style={{ marginBottom: '14px', padding: '14px', background: '#f0fdf4', borderRadius: '8px', borderLeft: '3px solid #22c55e' }}>
+            <div style={{ marginBottom: '16px', padding: '14px', background: '#f8fafc', borderRadius: '8px', borderLeft: '3px solid #64748b' }}>
               <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '600', color: '#0f1f3d' }}>💨 CO₂</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>CO₂ Interior (ppm)</label><input ref={co2IntRef} className="input-field" type="number" step="1" placeholder="ej. 500" style={{ fontSize: '13px' }} /></div>
-                <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>CO₂ Exterior (ppm)</label><input ref={co2ExtRef} className="input-field" type="number" step="1" placeholder="ej. 420" style={{ fontSize: '13px' }} /></div>
+                <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>CO₂ interior (ppm)</label><input ref={co2IntRef} className="input-field" type="number" step="1" placeholder="400–1000" style={{ fontSize: '13px' }} /></div>
+                <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', display: 'block', marginBottom: '3px' }}>CO₂ exterior (ppm)</label><input ref={co2ExtRef} className="input-field" type="number" step="1" placeholder="400–420" style={{ fontSize: '13px' }} /></div>
               </div>
             </div>
 
