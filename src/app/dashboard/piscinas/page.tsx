@@ -485,22 +485,22 @@ export default function PiscinasPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>Temp. ambiente</span>
-                      <span className={valueClass(ta, 26, 33)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{ta?.toFixed(1) ?? '—'} °C</span>
+                      <span className={valueClass(ta, 26, 33)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{ta?.toFixed(1) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>°C</span></span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>Humedad relativa</span>
-                      <span className={valueClass(hr, 50, 70)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{hr?.toFixed(1) ?? '—'} %</span>
+                      <span className={valueClass(hr, 50, 70)} style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{hr?.toFixed(1) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>%</span></span>
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
-            <div className="card" style={{ padding: '18px', maxWidth: '400px' }}>
-              <h3 style={{ margin: '0 0 14px', fontSize: '13px', fontWeight: '700', color: '#0f1f3d' }}>💨 CO₂</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Interior</span><span style={{ fontFamily: 'var(--font-mono)' }}>{lastAmb?.params.co2Interior?.toFixed(0) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Exterior</span><span style={{ fontFamily: 'var(--font-mono)' }}>{lastAmb?.params.co2Exterior?.toFixed(0) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>ΔCO₂</span><span className={co2Delta != null ? (co2Delta > 500 ? 'val-danger' : 'val-ok') : ''} style={{ fontFamily: 'var(--font-mono)', fontWeight: '700' }}>{co2Delta ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
+              <div className="card" style={{ padding: '18px', borderTop: '3px solid #84cc16' }}>
+                <h3 style={{ margin: '0 0 14px', fontSize: '13px', fontWeight: '700', color: '#0f1f3d' }}>💨 CO₂</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b' }}>Interior</span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{lastAmb?.params.co2Interior?.toFixed(0) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b' }}>Exterior</span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{lastAmb?.params.co2Exterior?.toFixed(0) ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>ΔCO₂</span><span className={co2Delta != null ? (co2Delta > 500 ? 'val-danger' : 'val-ok') : ''} style={{ fontFamily: 'var(--font-mono)', fontWeight: '700' }}>{co2Delta ?? '—'} <span style={{ color: '#94a3b8', fontSize: '11px' }}>ppm</span></span></div>
+                </div>
               </div>
             </div>
             <div className="card" style={{ overflow: 'hidden', marginTop: '20px' }}>
