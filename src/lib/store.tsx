@@ -251,21 +251,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUsers(prev => prev.filter(u => u.id !== id));
   };
 
+  // ─── Delete functions ─────────────────────────────────────────────────────
   const deleteContador = async (id: string) => {
-  await supabase.from('contadores').delete().eq('id', id);
-  setContadores(prev => prev.filter(e => e.id !== id));
-};
+    await supabase.from('contadores').delete().eq('id', id);
+    setContadores(prev => prev.filter(e => e.id !== id));
+  };
 
-const deleteRecirculacion = async (id: string) => {
-  await supabase.from('recirculacion').delete().eq('id', id);
-  setRecirculacion(prev => prev.filter(e => e.id !== id));
-};
+  const deleteRecirculacion = async (id: string) => {
+    await supabase.from('recirculacion').delete().eq('id', id);
+    setRecirculacion(prev => prev.filter(e => e.id !== id));
+  };
 
-const deleteParametro = async (id: string) => {
-  await supabase.from('parametros').delete().eq('id', id);
-  setParametros(prev => prev.filter(e => e.id !== id));
-};
-  
+  const deleteParametro = async (id: string) => {
+    await supabase.from('parametros').delete().eq('id', id);
+    setParametros(prev => prev.filter(e => e.id !== id));
+  };
+
   const addContador = async (e: Omit<ContadorEntry, 'id'>) => {
     const row = { id: `c${Date.now()}`, date: e.date, accesos: e.accesos, temp_exterior: e.tempExterior, agua_general: e.aguaGeneral, agua_general_diario: e.aguaGeneralDiario, gas: e.gas, gas_diario: e.gasDiario, agua_piscinas: e.aguaPiscinas, agua_piscinas_diario: e.aguaPiscinasDiario, kw_tolargi: e.kwTolargi, ur_beroa: e.urBeroa, electricidad_normal: e.electricidadNormal, electricidad_preferente: e.electricidadPreferente };
     await supabase.from('contadores').insert(row);
@@ -512,7 +513,8 @@ const deleteParametro = async (id: string) => {
       login, logout, hasPermission, updateUser, addUser, deleteUser,
       addContador, addPoolParam, addRecirculacion, addLegionellaTemp, addLegionellaBiocida, addIncendio,
       resolveAlert, resolveAlertWithRepair, updateParamValue, updateParamSession,
-      toggleSeasonalPool, generateAlertsFromData, deleteContador, deleteRecirculacion, deleteParametro,
+      toggleSeasonalPool, generateAlertsFromData,
+      deleteContador, deleteRecirculacion, deleteParametro,
     }}>
       {children}
     </AppContext.Provider>
