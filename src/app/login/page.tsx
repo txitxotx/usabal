@@ -82,14 +82,6 @@ export default function LoginPage() {
               {loading ? 'Accediendo...' : 'Entrar'}
             </button>
           </form>
-
-          <div style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', borderRadius: '8px', fontSize: '12px', color: '#64748b' }}>
-            <p style={{ margin: '0 0 6px', fontWeight: '600', color: '#334155' }}>Usuarios de demo:</p>
-            <p style={{ margin: '2px 0' }}>admin@aquadash.com / admin123</p>
-            <p style={{ margin: '2px 0' }}>supervisor@aquadash.com / super123</p>
-            <p style={{ margin: '2px 0' }}>jon@aquadash.com / jon123</p>
-            <p style={{ margin: '2px 0' }}>readonly@aquadash.com / view123</p>
-          </div>
         </div>
       </div>
     </div>
