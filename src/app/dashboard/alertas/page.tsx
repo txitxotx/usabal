@@ -244,7 +244,7 @@ export default function AlertasPage() {
                       style={{ fontSize: '12px', padding: '6px 14px', flex: 'none' }}
                       onClick={() => setResolveModal({
                         id: a.id, message: a.message,
-                        currentValue: a.value ? parseFloat(a.value) || a.value : undefined,
+                        currentValue: a.value ?? undefined,
                         pool: a.pool, paramDate: a.paramDate, paramSession: a.paramSession, parameterKey: a.parameterKey,
                       })}
                     >
