@@ -18,15 +18,18 @@ export default function Sidebar({ open, onClose, dark = false }: SidebarProps) {
   const router = useRouter();
   const unresolvedAlerts = alerts.filter(a => !a.resolved && a.type === 'danger').length;
 
+  const isAdmin = currentUser?.role === 'admin';
+
   const NAV_ITEMS = [
-    { labelKey: 'nav_panel',        path: '/dashboard',                  icon: '⊞', perm: null },
-    { labelKey: 'nav_piscinas',     path: '/dashboard/piscinas',         icon: '🏊', perm: 'view_piscinas' },
-    { labelKey: 'nav_recirculacion',path: '/dashboard/recirculacion',    icon: '🔄', perm: 'view_recirculacion' },
-    { labelKey: 'nav_contadores',   path: '/dashboard/contadores',       icon: '📊', perm: 'view_contadores' },
-    { labelKey: 'nav_legionella',   path: '/dashboard/legionella',       icon: '🧫', perm: 'view_legionella' },
-    { labelKey: 'nav_incendios',    path: '/dashboard/incendios',        icon: '🔥', perm: 'view_incendios' },
-    { labelKey: 'nav_alertas',      path: '/dashboard/alertas',          icon: '🔔', perm: 'view_alerts' },
-    { labelKey: 'nav_usuarios',     path: '/dashboard/usuarios',         icon: '👥', perm: 'manage_users' },
+    { labelKey: 'nav_panel',         path: '/dashboard',                  icon: '⊞', perm: null,                 adminOnly: false },
+    { labelKey: 'nav_piscinas',      path: '/dashboard/piscinas',         icon: '🏊', perm: 'view_piscinas',      adminOnly: false },
+    { labelKey: 'nav_recirculacion', path: '/dashboard/recirculacion',    icon: '🔄', perm: 'view_recirculacion', adminOnly: false },
+    { labelKey: 'nav_contadores',    path: '/dashboard/contadores',       icon: '📊', perm: 'view_contadores',    adminOnly: false },
+    { labelKey: 'nav_legionella',    path: '/dashboard/legionella',       icon: '🧫', perm: 'view_legionella',    adminOnly: false },
+    { labelKey: 'nav_incendios',     path: '/dashboard/incendios',        icon: '🔥', perm: 'view_incendios',     adminOnly: false },
+    { labelKey: 'nav_alertas',       path: '/dashboard/alertas',          icon: '🔔', perm: 'view_alerts',        adminOnly: false },
+    { labelKey: 'nav_usuarios',      path: '/dashboard/usuarios',         icon: '👥', perm: 'manage_users',       adminOnly: false },
+    { labelKey: 'nav_configuracion', path: '/dashboard/configuracion',    icon: '⚙️', perm: null,                 adminOnly: true  },
   ] as const;
 
   const bg        = dark ? '#161b22' : '#fff';
@@ -83,6 +86,7 @@ export default function Sidebar({ open, onClose, dark = false }: SidebarProps) {
             {t('nav_menu')}
           </p>
           {NAV_ITEMS.map(item => {
+            if (item.adminOnly && !isAdmin) return null;
             if (item.perm && !hasPermission(item.perm as any)) return null;
             const isActive = pathname === item.path;
             const label = t(item.labelKey as any);
