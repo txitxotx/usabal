@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'supervisor' | 'operario' | 'readonly' | 'sanidad';
+export type UserRole = 'admin' | 'supervisor' | 'operario' | 'readonly' | 'sanidad' | 'socorrista';
 
 export type Permission =
   | 'view_piscinas' | 'view_recirculacion' | 'view_contadores'
