@@ -14,6 +14,16 @@ const POOL_VOLUME: Record<string, number> = {
   'P. Ext. Grande': 641, 'P. Ext. Pequeña': 85, 'Splash': 5,
 };
 
+const DELTA_WARN: Record<string, { recircMin: number; renovadaMax: number; horasMin: number }> = {
+  'P. Grande':       { recircMin: 4700, renovadaMax: 75,  horasMin: 15 },
+  'P. Peq.-Med.':   { recircMin: 950,  renovadaMax: 40,  horasMin: 15 },
+  'SPA':             { recircMin: 1900, renovadaMax: 45,  horasMin: 15 },
+  'Pileta':          { recircMin: 50,   renovadaMax: 15,  horasMin: 10 },
+  'P. Ext. Grande':  { recircMin: 4700, renovadaMax: 75,  horasMin: 15 },
+  'P. Ext. Pequeña': { recircMin: 950,  renovadaMax: 40,  horasMin: 15 },
+  'Splash':          { recircMin: 50,   renovadaMax: 15,  horasMin: 10 },
+};
+
 function deltaClass(v: number | null, threshold: number, isMin: boolean) {
   if (v === null || v === undefined) return '';
   if (v < 0) return 'val-danger';
@@ -51,7 +61,7 @@ const EMPTY_FORM = {
 };
 
 export default function RecirculacionPage() {
-  const { hasPermission, recirculacion, activePools, addRecirculacion, deleteRecirculacion, currentUser, recircThresholds } = useApp();
+  const { hasPermission, recirculacion, activePools, addRecirculacion, deleteRecirculacion, currentUser } = useApp();
   const [selectedPool, setSelectedPool] = useState<string>(activePools[0] ?? 'P. Grande');
   const [tab, setTab] = useState<'resumen' | 'tabla'>('resumen');
   const [formOpen, setFormOpen] = useState(false);
@@ -86,7 +96,7 @@ export default function RecirculacionPage() {
   });
 
   const last = latestByPool[selectedPool];
-  const warn = recircThresholds[selectedPool] ?? { recircMin: 0, renovadaMax: 9999, horasMin: 0 };
+  const warn = DELTA_WARN[selectedPool] ?? { recircMin: 0, renovadaMax: 9999, horasMin: 0 };
   const vol  = POOL_VOLUME[selectedPool];
 
   const handleSave = async () => {
@@ -178,7 +188,7 @@ export default function RecirculacionPage() {
           const dR = entry && prevEntry ? Math.round(entry.contadorRecirculacion - prevEntry.contadorRecirculacion) : null;
           const dA = entry && prevEntry ? Math.round(entry.contadorDepuracion - prevEntry.contadorDepuracion) : null;
           const dH = entry && prevEntry ? Math.round((entry.horasFiltraje - prevEntry.horasFiltraje) * 10) / 10 : null;
-          const pw = recircThresholds[pool] ?? { recircMin: 0, renovadaMax: 9999, horasMin: 0 };
+          const pw = DELTA_WARN[pool] ?? { recircMin: 0, renovadaMax: 9999, horasMin: 0 };
           const pVol = POOL_VOLUME[pool];
           const tiempoRecirc = calcTiempoRecirc(pVol, dR, dH);
 

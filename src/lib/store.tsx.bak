@@ -4,10 +4,8 @@ import { supabase } from '@/lib/supabase';
 import type { User, Permission, Alert, AlertRepair, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord, PoolName, RecirculacionEntry } from '@/types';
 import { BASE_POOLS, SEASONAL_POOLS } from '@/types';
 
-// ─── Thresholds por defecto (valores oficiales RD 742/2013) ───────────────────
-// Se conservan como export para uso estático (PDFs, fallback). Los valores que
-// se usan en runtime vienen del estado del context (configurable por admin).
-export const DEFAULT_THRESHOLDS = {
+// ─── Thresholds globales ──────────────────────────────────────────────────────
+export const THRESHOLDS = {
   cloroLibre:             { min: 0.5,  max: 2.0,  unit: 'mg/L' },
   cloroCombinado:         { min: 0,    max: 0.6,  unit: 'mg/L' },
   ph:                     { min: 7.2,  max: 7.8,  unit: '' },
@@ -21,9 +19,8 @@ export const DEFAULT_THRESHOLDS = {
   biocida:                { min: 0.2,  max: 2.0,  unit: 'mg/L' },
   phLegionella:           { min: 7.0,  max: 8.0,  unit: '' },
 };
-export const THRESHOLDS = DEFAULT_THRESHOLDS; // alias retro-compatible
 
-export const DEFAULT_TEMP_AGUA_THRESHOLDS: Record<string, { min: number; max: number }> = {
+export const TEMP_AGUA_THRESHOLDS: Record<string, { min: number; max: number }> = {
   'P. Grande':       { min: 26,  max: 29   },
   'P. Peq.-Med.':   { min: 28,  max: 32.5 },
   'SPA':             { min: 30,  max: 33   },
@@ -32,30 +29,6 @@ export const DEFAULT_TEMP_AGUA_THRESHOLDS: Record<string, { min: number; max: nu
   'P. Ext. Pequena': { min: 0,   max: 40   },
   'Splash':          { min: 0,   max: 40   },
 };
-export const TEMP_AGUA_THRESHOLDS = DEFAULT_TEMP_AGUA_THRESHOLDS;
-
-export const DEFAULT_RECIRC_THRESHOLDS: Record<string, { recircMin: number; renovadaMax: number; horasMin: number }> = {
-  'P. Grande':       { recircMin: 4700, renovadaMax: 75,  horasMin: 15 },
-  'P. Peq.-Med.':    { recircMin: 950,  renovadaMax: 40,  horasMin: 15 },
-  'SPA':             { recircMin: 1900, renovadaMax: 45,  horasMin: 15 },
-  'Pileta':          { recircMin: 50,   renovadaMax: 15,  horasMin: 10 },
-  'P. Ext. Grande':  { recircMin: 4700, renovadaMax: 75,  horasMin: 15 },
-  'P. Ext. Pequeña': { recircMin: 950,  renovadaMax: 40,  horasMin: 15 },
-  'Splash':          { recircMin: 50,   renovadaMax: 15,  horasMin: 10 },
-};
-
-export const DEFAULT_CONTADORES_THRESHOLDS = {
-  aguaGeneral:  { min: 0, max: 200,  unit: 'm³' },
-  aguaPiscinas: { min: 0, max: 100,  unit: 'm³' },
-  gas:          { min: 0, max: 500,  unit: 'm³' },
-  kwTolargi:    { min: 0, max: 2000, unit: 'kWh' },
-  accesos:      { min: 0, max: 1500, unit: 'personas' },
-};
-
-export type ThresholdsConfig           = typeof DEFAULT_THRESHOLDS;
-export type TempAguaThresholdsConfig   = typeof DEFAULT_TEMP_AGUA_THRESHOLDS;
-export type RecircThresholdsConfig     = typeof DEFAULT_RECIRC_THRESHOLDS;
-export type ContadoresThresholdsConfig = typeof DEFAULT_CONTADORES_THRESHOLDS;
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 function rowToParam(row: any): PoolParamRecord {
@@ -157,19 +130,6 @@ interface AppState {
   alertHistory: Alert[];
   alertRepairs: AlertRepair[];
   activePools: PoolName[];
-  // Configuración de umbrales (dinámicos, persistidos en app_config)
-  thresholds: ThresholdsConfig;
-  tempAguaThresholds: TempAguaThresholdsConfig;
-  recircThresholds: RecircThresholdsConfig;
-  contadoresThresholds: ContadoresThresholdsConfig;
-  updateThresholds: (next: ThresholdsConfig) => Promise<void>;
-  updateTempAguaThresholds: (next: TempAguaThresholdsConfig) => Promise<void>;
-  updateRecircThresholds: (next: RecircThresholdsConfig) => Promise<void>;
-  updateContadoresThresholds: (next: ContadoresThresholdsConfig) => Promise<void>;
-  resetThresholds: (keys?: (keyof ThresholdsConfig)[]) => Promise<void>;
-  resetTempAguaThresholds: () => Promise<void>;
-  resetRecircThresholds: () => Promise<void>;
-  resetContadoresThresholds: () => Promise<void>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   hasPermission: (p: Permission) => boolean;
@@ -213,10 +173,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [alertHistory, setAlertHistory] = useState<Alert[]>([]);
   const [alertRepairs, setAlertRepairs] = useState<AlertRepair[]>([]);
   const [activePools, setActivePools] = useState<PoolName[]>([...BASE_POOLS]);
-  const [thresholds, setThresholds]                       = useState<ThresholdsConfig>(DEFAULT_THRESHOLDS);
-  const [tempAguaThresholds, setTempAguaThresholds]       = useState<TempAguaThresholdsConfig>(DEFAULT_TEMP_AGUA_THRESHOLDS);
-  const [recircThresholds, setRecircThresholds]           = useState<RecircThresholdsConfig>(DEFAULT_RECIRC_THRESHOLDS);
-  const [contadoresThresholds, setContadoresThresholds]   = useState<ContadoresThresholdsConfig>(DEFAULT_CONTADORES_THRESHOLDS);
 
   useEffect(() => {
     async function loadAll() {
@@ -254,18 +210,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (configData) {
           const poolsConfig = configData.find((c: any) => c.key === 'active_pools');
           if (poolsConfig) setActivePools(poolsConfig.value as PoolName[]);
-
-          const th = configData.find((c: any) => c.key === 'thresholds');
-          if (th?.value) setThresholds({ ...DEFAULT_THRESHOLDS, ...(th.value as Partial<ThresholdsConfig>) });
-
-          const ta = configData.find((c: any) => c.key === 'temp_agua_thresholds');
-          if (ta?.value) setTempAguaThresholds({ ...DEFAULT_TEMP_AGUA_THRESHOLDS, ...(ta.value as object) });
-
-          const rc = configData.find((c: any) => c.key === 'recirc_thresholds');
-          if (rc?.value) setRecircThresholds({ ...DEFAULT_RECIRC_THRESHOLDS, ...(rc.value as object) });
-
-          const ct = configData.find((c: any) => c.key === 'contadores_thresholds');
-          if (ct?.value) setContadoresThresholds({ ...DEFAULT_CONTADORES_THRESHOLDS, ...(ct.value as object) });
         }
         const sessionId = sessionStorage.getItem('aq_session_id');
         if (sessionId && usersData) {
@@ -496,24 +440,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     for (const pool of activePools) {
       const cl = rec.params.cloroLibre[pool];
-      if (cl !== null && cl !== undefined && (cl < thresholds.cloroLibre.min || cl > thresholds.cloroLibre.max)) {
-        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Cloro libre fuera de rango en ${pool}`, value: String(cl), threshold: `${thresholds.cloroLibre.min}-${thresholds.cloroLibre.max} mg/L`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'cloroLibre' });
+      if (cl !== null && cl !== undefined && (cl < THRESHOLDS.cloroLibre.min || cl > THRESHOLDS.cloroLibre.max)) {
+        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Cloro libre fuera de rango en ${pool}`, value: String(cl), threshold: `${THRESHOLDS.cloroLibre.min}-${THRESHOLDS.cloroLibre.max} mg/L`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'cloroLibre' });
       }
       const cc = rec.params.cloroCombinado[pool];
-      if (cc !== null && cc !== undefined && cc > thresholds.cloroCombinado.max) {
-        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Cloro combinado alto en ${pool}`, value: String(cc), threshold: `<=${thresholds.cloroCombinado.max} mg/L`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'cloroCombinado' });
+      if (cc !== null && cc !== undefined && cc > THRESHOLDS.cloroCombinado.max) {
+        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Cloro combinado alto en ${pool}`, value: String(cc), threshold: `<=${THRESHOLDS.cloroCombinado.max} mg/L`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'cloroCombinado' });
       }
       const ph = rec.params.ph[pool];
-      if (ph !== null && ph !== undefined && (ph < thresholds.ph.min || ph > thresholds.ph.max)) {
-        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `pH fuera de rango en ${pool}`, value: String(ph), threshold: `${thresholds.ph.min}-${thresholds.ph.max}`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'ph' });
+      if (ph !== null && ph !== undefined && (ph < THRESHOLDS.ph.min || ph > THRESHOLDS.ph.max)) {
+        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `pH fuera de rango en ${pool}`, value: String(ph), threshold: `${THRESHOLDS.ph.min}-${THRESHOLDS.ph.max}`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'ph' });
       }
       const turb = rec.params.turbidez[pool];
-      if (turb !== null && turb !== undefined && turb > thresholds.turbidez.max) {
-        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Turbidez elevada en ${pool}`, value: String(turb), threshold: `<=${thresholds.turbidez.max} NTU`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'turbidez' });
+      if (turb !== null && turb !== undefined && turb > THRESHOLDS.turbidez.max) {
+        newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Turbidez elevada en ${pool}`, value: String(turb), threshold: `<=${THRESHOLDS.turbidez.max} NTU`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'turbidez' });
       }
       const temp = rec.params.temperatura[pool as PoolName];
       if (temp !== null && temp !== undefined) {
-        const tr = tempAguaThresholds[pool] ?? { min: 0, max: 40 };
+        const tr = TEMP_AGUA_THRESHOLDS[pool] ?? { min: 0, max: 40 };
         if (temp < tr.min || temp > tr.max) {
           newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', pool, message: `Temperatura del agua fuera de rango en ${pool}`, value: String(temp), threshold: `${tr.min}-${tr.max}°C`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'temperatura' });
         }
@@ -521,8 +465,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     const { co2Interior, co2Exterior } = rec.params;
-    if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > thresholds.co2Delta.max) {
-      newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)), threshold: `<=${thresholds.co2Delta.max} ppm`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'co2Delta' });
+    if (co2Interior !== null && co2Exterior !== null && co2Interior !== undefined && co2Exterior !== undefined && (co2Interior - co2Exterior) > THRESHOLDS.co2Delta.max) {
+      newAlerts.push({ id: `a${idx++}`, type: 'danger', section: 'piscinas', message: 'CO2 interior elevado (diferencia exterior)', value: String(Math.round(co2Interior - co2Exterior)), threshold: `<=${THRESHOLDS.co2Delta.max} ppm`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: 'co2Delta' });
     }
 
     const ambientChecks: Array<{ val: number | null | undefined; label: string; key: string }> = [
@@ -531,8 +475,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       { val: rec.params.tempAmbientePequena, label: 'Temperatura ambiente P. Pequeña', key: 'tempAmbientePequena' },
     ];
     for (const { val, label, key } of ambientChecks) {
-      if (val !== null && val !== undefined && (val < thresholds.tempAmbiente.min || val > thresholds.tempAmbiente.max)) {
-        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', message: `${label} fuera de rango (${val.toFixed(1)}°C)`, value: String(val), threshold: `${thresholds.tempAmbiente.min}-${thresholds.tempAmbiente.max} °C`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: key });
+      if (val !== null && val !== undefined && (val < THRESHOLDS.tempAmbiente.min || val > THRESHOLDS.tempAmbiente.max)) {
+        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', message: `${label} fuera de rango (${val.toFixed(1)}°C)`, value: String(val), threshold: `${THRESHOLDS.tempAmbiente.min}-${THRESHOLDS.tempAmbiente.max} °C`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: key });
       }
     }
 
@@ -542,8 +486,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       { val: rec.params.humedadPequena, label: 'Humedad relativa P. Pequeña', key: 'humedadPequena' },
     ];
     for (const { val, label, key } of humChecks) {
-      if (val !== null && val !== undefined && (val < thresholds.humedadRelativa.min || val > thresholds.humedadRelativa.max)) {
-        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', message: `${label} fuera de rango (${val.toFixed(1)}%)`, value: String(val), threshold: `${thresholds.humedadRelativa.min}-${thresholds.humedadRelativa.max} %`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: key });
+      if (val !== null && val !== undefined && (val < THRESHOLDS.humedadRelativa.min || val > THRESHOLDS.humedadRelativa.max)) {
+        newAlerts.push({ id: `a${idx++}`, type: 'warning', section: 'piscinas', message: `${label} fuera de rango (${val.toFixed(1)}%)`, value: String(val), threshold: `${THRESHOLDS.humedadRelativa.min}-${THRESHOLDS.humedadRelativa.max} %`, timestamp: rec.date, resolved: false, param_date: rec.date, param_session: rec.session, parameter_key: key });
       }
     }
 
@@ -562,45 +506,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.from('app_config').upsert({ key: 'active_pools', value: next, updated_at: new Date().toISOString() });
   };
 
-  // ─── Configuración de umbrales ─────────────────────────────────────────────
-  const persistConfig = async (key: string, value: any) => {
-    await supabase.from('app_config').upsert({ key, value, updated_at: new Date().toISOString() });
-  };
-
-  const updateThresholds = async (next: ThresholdsConfig) => {
-    setThresholds(next);
-    await persistConfig('thresholds', next);
-  };
-  const updateTempAguaThresholds = async (next: TempAguaThresholdsConfig) => {
-    setTempAguaThresholds(next);
-    await persistConfig('temp_agua_thresholds', next);
-  };
-  const updateRecircThresholds = async (next: RecircThresholdsConfig) => {
-    setRecircThresholds(next);
-    await persistConfig('recirc_thresholds', next);
-  };
-  const updateContadoresThresholds = async (next: ContadoresThresholdsConfig) => {
-    setContadoresThresholds(next);
-    await persistConfig('contadores_thresholds', next);
-  };
-
-  const resetThresholds = async (keys?: (keyof ThresholdsConfig)[]) => {
-    const next = keys && keys.length
-      ? { ...thresholds, ...Object.fromEntries(keys.map(k => [k, DEFAULT_THRESHOLDS[k]])) }
-      : { ...DEFAULT_THRESHOLDS };
-    await updateThresholds(next as ThresholdsConfig);
-  };
-  const resetTempAguaThresholds   = () => updateTempAguaThresholds({ ...DEFAULT_TEMP_AGUA_THRESHOLDS });
-  const resetRecircThresholds     = () => updateRecircThresholds({ ...DEFAULT_RECIRC_THRESHOLDS });
-  const resetContadoresThresholds = () => updateContadoresThresholds({ ...DEFAULT_CONTADORES_THRESHOLDS });
-
   return (
     <AppContext.Provider value={{
       loading, currentUser, users, contadores, parametros, recirculacion,
       legionellaTemps, legionellaBiocida, incendios, alerts, alertHistory, alertRepairs, activePools,
-      thresholds, tempAguaThresholds, recircThresholds, contadoresThresholds,
-      updateThresholds, updateTempAguaThresholds, updateRecircThresholds, updateContadoresThresholds,
-      resetThresholds, resetTempAguaThresholds, resetRecircThresholds, resetContadoresThresholds,
       login, logout, hasPermission, updateUser, addUser, deleteUser,
       addContador, addPoolParam, addRecirculacion, addLegionellaTemp, addLegionellaBiocida, addIncendio,
       resolveAlert, resolveAlertWithRepair, updateParamValue, updateParamSession,

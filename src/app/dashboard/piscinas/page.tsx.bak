@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 import { useState, useMemo, useRef } from 'react';
-import { useApp } from '@/lib/store';
+import { useApp, THRESHOLDS, TEMP_AGUA_THRESHOLDS } from '@/lib/store';
 import { SEASONAL_POOLS, BASE_POOLS } from '@/types';
 import type { PoolName, MeasurementSession } from '@/types';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
@@ -19,6 +19,10 @@ const PARAMS_META_KEYS = [
   { key: 'turbidez',       label: 'Turbidez',         unit: 'NTU',  color: '#6b7280' },
 ] as const;
 
+function getTempRange(pool: string) {
+  return TEMP_AGUA_THRESHOLDS[pool] ?? { min: 0, max: 40 };
+}
+
 function valueClass(v: number | null | undefined, min: number, max: number) {
   if (v === null || v === undefined) return '';
   if (v < min || v > max) {
@@ -28,6 +32,16 @@ function valueClass(v: number | null | undefined, min: number, max: number) {
   return 'val-ok';
 }
 
+function valueClassPool(v: number | null | undefined, key: string, pool: string) {
+  if (v === null || v === undefined) return '';
+  if (key === 'temperatura') { const { min, max } = getTempRange(pool); return valueClass(v, min, max); }
+  if (key === 'cloroLibre')     return valueClass(v, THRESHOLDS.cloroLibre.min, THRESHOLDS.cloroLibre.max);
+  if (key === 'cloroCombinado') return valueClass(v, 0, THRESHOLDS.cloroCombinado.max);
+  if (key === 'ph')             return valueClass(v, THRESHOLDS.ph.min, THRESHOLDS.ph.max);
+  if (key === 'turbidez')       return valueClass(v, 0, THRESHOLDS.turbidez.max);
+  return '';
+}
+
 function getAmbZone(pool: string): 'grande' | 'pequena' | 'spa' | null {
   if (pool === 'todas' || pool === 'P. Grande') return 'grande';
   if (pool === 'P. Peq.-Med.') return 'pequena';
@@ -35,8 +49,7 @@ function getAmbZone(pool: string): 'grande' | 'pequena' | 'spa' | null {
   return 'grande';
 }
 
-function exportPDF(parametros: any[], pool: PoolName | 'todas', activePools: PoolName[], tempAguaThresholds: Record<string, { min: number; max: number }>) {
-  const getTempRange = (p: string) => tempAguaThresholds[p] ?? { min: 0, max: 40 };
+function exportPDF(parametros: any[], pool: PoolName | 'todas', activePools: PoolName[]) {
   const today = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
   const poolsToShow = pool === 'todas' ? activePools : [pool];
   const period = parametros.length > 0 ? `${parametros[0].date} — ${parametros[parametros.length - 1].date}` : '—';
@@ -186,19 +199,7 @@ tr:nth-child(even) td{background:#fafbfc}
 
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function PiscinasPage() {
-  const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser, updateParamValue, updateParamSession, deleteParametro, thresholds, tempAguaThresholds } = useApp();
-
-  // Helpers dependientes de los umbrales dinámicos (definidos aquí para reaccionar a cambios)
-  const getTempRange = (pool: string) => tempAguaThresholds[pool] ?? { min: 0, max: 40 };
-  const valueClassPool = (v: number | null | undefined, key: string, pool: string) => {
-    if (v === null || v === undefined) return '';
-    if (key === 'temperatura') { const { min, max } = getTempRange(pool); return valueClass(v, min, max); }
-    if (key === 'cloroLibre')     return valueClass(v, thresholds.cloroLibre.min, thresholds.cloroLibre.max);
-    if (key === 'cloroCombinado') return valueClass(v, 0, thresholds.cloroCombinado.max);
-    if (key === 'ph')             return valueClass(v, thresholds.ph.min, thresholds.ph.max);
-    if (key === 'turbidez')       return valueClass(v, 0, thresholds.turbidez.max);
-    return '';
-  };
+  const { hasPermission, parametros, alerts, activePools, toggleSeasonalPool, addPoolParam, currentUser, updateParamValue, updateParamSession, deleteParametro } = useApp();
   const [selectedPool, setSelectedPool] = useState<string>('P. Grande');
   const [selectedParam, setSelectedParam] = useState<string>('cloroLibre');
   const [tab, setTab] = useState<'resumen' | 'ambiente' | 'graficos' | 'tabla'>('resumen');
@@ -253,10 +254,10 @@ export default function PiscinasPage() {
   const paramMeta = PARAMS_META_KEYS.find(p => p.key === selectedParam)!;
   const getParamRange = (pool: string) => {
     if (selectedParam === 'temperatura') return getTempRange(pool);
-    if (selectedParam === 'cloroLibre') return { min: thresholds.cloroLibre.min, max: thresholds.cloroLibre.max };
-    if (selectedParam === 'cloroCombinado') return { min: 0, max: thresholds.cloroCombinado.max };
-    if (selectedParam === 'ph') return { min: thresholds.ph.min, max: thresholds.ph.max };
-    if (selectedParam === 'turbidez') return { min: 0, max: thresholds.turbidez.max };
+    if (selectedParam === 'cloroLibre') return { min: THRESHOLDS.cloroLibre.min, max: THRESHOLDS.cloroLibre.max };
+    if (selectedParam === 'cloroCombinado') return { min: 0, max: THRESHOLDS.cloroCombinado.max };
+    if (selectedParam === 'ph') return { min: THRESHOLDS.ph.min, max: THRESHOLDS.ph.max };
+    if (selectedParam === 'turbidez') return { min: 0, max: THRESHOLDS.turbidez.max };
     return { min: 0, max: 100 };
   };
   const { min: pMin, max: pMax } = getParamRange(selectedPool);
@@ -419,11 +420,11 @@ export default function PiscinasPage() {
             const temp = last.params.temperatura[pool as PoolName];
             const turb = last.params.turbidez[pool as PoolName];
             const issues: string[] = [];
-            if (cl   != null && (cl < thresholds.cloroLibre.min || cl > thresholds.cloroLibre.max)) issues.push('Cloro libre');
-            if (cc   != null && cc > thresholds.cloroCombinado.max) issues.push('Cloro comb.');
-            if (ph   != null && (ph < thresholds.ph.min || ph > thresholds.ph.max)) issues.push('pH');
+            if (cl   != null && (cl < 0.5 || cl > 2.0))          issues.push('Cloro libre');
+            if (cc   != null && cc > 0.6)                          issues.push('Cloro comb.');
+            if (ph   != null && (ph < 7.2 || ph > 7.8))           issues.push('pH');
             if (temp != null && (temp < tr.min || temp > tr.max))  issues.push('Temperatura');
-            if (turb != null && turb > thresholds.turbidez.max) issues.push('Turbidez');
+            if (turb != null && turb > 5.0)                        issues.push('Turbidez');
             return (
               <div key={pool} className="card" style={{ padding: '20px', borderTop: `3px solid ${POOL_COLORS[pool] ?? '#94a3b8'}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -441,11 +442,11 @@ export default function PiscinasPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {[
-                    { label: 'Cloro libre', val: cl,   min: thresholds.cloroLibre.min, max: thresholds.cloroLibre.max, unit: 'mg/L' },
-                    { label: 'Cloro comb.', val: cc,   min: 0,   max: thresholds.cloroCombinado.max, unit: 'mg/L' },
-                    { label: 'pH',          val: ph,   min: thresholds.ph.min, max: thresholds.ph.max, unit: '' },
+                    { label: 'Cloro libre', val: cl,   min: 0.5, max: 2.0, unit: 'mg/L' },
+                    { label: 'Cloro comb.', val: cc,   min: 0,   max: 0.6, unit: 'mg/L' },
+                    { label: 'pH',          val: ph,   min: 7.2, max: 7.8, unit: '' },
                     { label: 'Temperatura', val: temp, min: tr.min, max: tr.max, unit: '°C' },
-                    { label: 'Turbidez',    val: turb, min: 0,   max: thresholds.turbidez.max, unit: 'NTU' },
+                    { label: 'Turbidez',    val: turb, min: 0,   max: 5.0, unit: 'NTU' },
                   ].map(({ label, val, min, max, unit }) => (
                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>{label}</span>
@@ -719,7 +720,7 @@ export default function PiscinasPage() {
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button className="btn btn-secondary" onClick={() => setPdfModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={() => { exportPDF(filteredParametros, pdfPool, visiblePools, tempAguaThresholds); setPdfModal(false); }}>
+              <button className="btn btn-primary" onClick={() => { exportPDF(filteredParametros, pdfPool, visiblePools); setPdfModal(false); }}>
                 Generar PDF
               </button>
             </div>
