@@ -26,6 +26,7 @@ const ROLE_DEFAULTS: Record<UserRole, Permission[]> = {
   operario:   ['view_piscinas','edit_piscinas','view_contadores','edit_contadores','view_recirculacion','edit_recirculacion','view_legionella','edit_legionella','view_incendios','edit_incendios'],
   readonly:   ['view_piscinas','view_contadores','view_recirculacion','view_legionella','view_incendios'],
   sanidad:    ['view_piscinas','view_legionella'],
+  socorrista: ['view_piscinas','edit_piscinas','view_contadores','edit_contadores','view_recirculacion','edit_recirculacion','view_legionella','edit_legionella','view_incendios','edit_incendios'],
 };
 
 const ROLE_COLORS: Record<UserRole, string> = {
@@ -34,6 +35,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
   operario:   'badge-info',
   readonly:   'badge-gray',
   sanidad:    'badge-ok',
+  socorrista: 'badge-info',
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -42,6 +44,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   operario:   'Operario',
   readonly:   'Solo lectura',
   sanidad:    'Sanidad',
+  socorrista: 'Socorrista',
 };
 
 export default function UsuariosPage() {
