@@ -111,6 +111,7 @@ export default function UsuariosPage() {
       <option value="operario">Operario</option>
       <option value="readonly">Solo lectura</option>
       <option value="sanidad">Sanidad</option>
+      <option value="socorrista">Socorrista</option>
     </select>
   );
 
