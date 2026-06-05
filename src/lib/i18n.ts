@@ -16,6 +16,7 @@ export const translations = {
     nav_alertas: 'Alertas',
     nav_usuarios: 'Usuarios',
     nav_configuracion: 'Configuración',
+    nav_socorrista: 'Socorrista',
 
     // Header / Layout
     logout: 'Cerrar sesión',
@@ -174,6 +175,7 @@ export const translations = {
     nav_alertas: 'Alertak',
     nav_usuarios: 'Erabiltzaileak',
     nav_configuracion: 'Konfigurazioa',
+    nav_socorrista: 'Sorosle',
 
     // Header / Layout
     logout: 'Saioa itxi',

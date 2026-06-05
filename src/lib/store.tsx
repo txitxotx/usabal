@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { User, Permission, Alert, AlertRepair, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord, PoolName, RecirculacionEntry } from '@/types';
+import type { User, Permission, Alert, AlertRepair, ContadorEntry, LegionellaTemp, LegionellaBiocida, IncendioCheck, PoolParamRecord, PoolName, RecirculacionEntry, IntervencionSocorrista, AforoEntry } from '@/types';
 import { BASE_POOLS, SEASONAL_POOLS } from '@/types';
 
 // ─── Thresholds por defecto (valores oficiales RD 742/2013) ───────────────────
@@ -157,6 +157,12 @@ interface AppState {
   alertHistory: Alert[];
   alertRepairs: AlertRepair[];
   activePools: PoolName[];
+  intervenciones: IntervencionSocorrista[];
+  aforo: AforoEntry[];
+  addIntervencion: (data: Omit<IntervencionSocorrista, 'id' | 'createdAt'>) => Promise<void>;
+  deleteIntervencion: (id: string) => Promise<void>;
+  upsertAforo: (data: Omit<AforoEntry, 'id' | 'updatedAt'>) => Promise<void>;
+  deleteAforoDay: (date: string) => Promise<void>;
   // Configuración de umbrales (dinámicos, persistidos en app_config)
   thresholds: ThresholdsConfig;
   tempAguaThresholds: TempAguaThresholdsConfig;
@@ -213,6 +219,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [alertHistory, setAlertHistory] = useState<Alert[]>([]);
   const [alertRepairs, setAlertRepairs] = useState<AlertRepair[]>([]);
   const [activePools, setActivePools] = useState<PoolName[]>([...BASE_POOLS]);
+  const [intervenciones, setIntervenciones] = useState<IntervencionSocorrista[]>([]);
+  const [aforo, setAforo]                   = useState<AforoEntry[]>([]);
   const [thresholds, setThresholds]                       = useState<ThresholdsConfig>(DEFAULT_THRESHOLDS);
   const [tempAguaThresholds, setTempAguaThresholds]       = useState<TempAguaThresholdsConfig>(DEFAULT_TEMP_AGUA_THRESHOLDS);
   const [recircThresholds, setRecircThresholds]           = useState<RecircThresholdsConfig>(DEFAULT_RECIRC_THRESHOLDS);
@@ -266,6 +274,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
           const ct = configData.find((c: any) => c.key === 'contadores_thresholds');
           if (ct?.value) setContadoresThresholds({ ...DEFAULT_CONTADORES_THRESHOLDS, ...(ct.value as object) });
+        }
+
+        // Socorrista: intervenciones
+        const { data: intervData } = await supabase
+          .from('socorrista_intervenciones')
+          .select('*')
+          .order('fecha_hora', { ascending: false });
+        if (intervData) {
+          setIntervenciones(intervData.map((r: any) => ({
+            id:             r.id,
+            fechaHora:      r.fecha_hora,
+            edadPaciente:   r.edad_paciente,
+            motivo:         r.motivo ?? '',
+            actuacion:      r.actuacion ?? '',
+            materiales:     r.materiales ?? '',
+            notaFinal:      r.nota_final ?? '',
+            socorristaId:   r.socorrista_id ?? '',
+            socorristaName: r.socorrista_name ?? '',
+            createdAt:      r.created_at,
+          })));
+        }
+
+        // Socorrista: aforo
+        const { data: aforoData } = await supabase
+          .from('socorrista_aforo')
+          .select('*')
+          .order('date', { ascending: false });
+        if (aforoData) {
+          setAforo(aforoData.map((r: any) => ({
+            id:             r.id,
+            date:           r.date,
+            hour:           r.hour,
+            pool:           r.pool,
+            cantidad:       r.cantidad,
+            socorristaId:   r.socorrista_id ?? '',
+            socorristaName: r.socorrista_name ?? '',
+            updatedAt:      r.updated_at,
+          })));
         }
         const sessionId = sessionStorage.getItem('aq_session_id');
         if (sessionId && usersData) {
@@ -594,10 +640,72 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const resetRecircThresholds     = () => updateRecircThresholds({ ...DEFAULT_RECIRC_THRESHOLDS });
   const resetContadoresThresholds = () => updateContadoresThresholds({ ...DEFAULT_CONTADORES_THRESHOLDS });
 
+  // ─── Socorrista CRUD ───────────────────────────────────────────────────────
+  const addIntervencion = async (data: Omit<IntervencionSocorrista, 'id' | 'createdAt'>) => {
+    const id = `int_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const row = {
+      id,
+      fecha_hora:      data.fechaHora,
+      edad_paciente:   data.edadPaciente,
+      motivo:          data.motivo,
+      actuacion:       data.actuacion,
+      materiales:      data.materiales,
+      nota_final:      data.notaFinal,
+      socorrista_id:   data.socorristaId,
+      socorrista_name: data.socorristaName,
+    };
+    const { error } = await supabase.from('socorrista_intervenciones').insert(row);
+    if (error) { console.error(error); alert('Error guardando intervención: ' + error.message); return; }
+    setIntervenciones(prev => [{
+      ...data,
+      id,
+      createdAt: new Date().toISOString(),
+    }, ...prev]);
+  };
+
+  const deleteIntervencion = async (id: string) => {
+    const { error } = await supabase.from('socorrista_intervenciones').delete().eq('id', id);
+    if (error) { console.error(error); alert('Error eliminando: ' + error.message); return; }
+    setIntervenciones(prev => prev.filter(i => i.id !== id));
+  };
+
+  const upsertAforo = async (data: Omit<AforoEntry, 'id' | 'updatedAt'>) => {
+    // ¿existe ya un registro para (date, hour, pool)?
+    const existing = aforo.find(a => a.date === data.date && a.hour === data.hour && a.pool === data.pool);
+    const id = existing?.id ?? `aforo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const now = new Date().toISOString();
+    const row = {
+      id,
+      date:            data.date,
+      hour:            data.hour,
+      pool:            data.pool,
+      cantidad:        data.cantidad,
+      socorrista_id:   data.socorristaId,
+      socorrista_name: data.socorristaName,
+      updated_at:      now,
+    };
+    const { error } = await supabase
+      .from('socorrista_aforo')
+      .upsert(row, { onConflict: 'date,hour,pool' });
+    if (error) { console.error(error); alert('Error guardando aforo: ' + error.message); return; }
+    setAforo(prev => {
+      const filtered = prev.filter(a => !(a.date === data.date && a.hour === data.hour && a.pool === data.pool));
+      return [{ ...data, id, updatedAt: now }, ...filtered];
+    });
+  };
+
+  const deleteAforoDay = async (date: string) => {
+    const { error } = await supabase.from('socorrista_aforo').delete().eq('date', date);
+    if (error) { console.error(error); alert('Error eliminando: ' + error.message); return; }
+    setAforo(prev => prev.filter(a => a.date !== date));
+  };
+
   return (
     <AppContext.Provider value={{
       loading, currentUser, users, contadores, parametros, recirculacion,
       legionellaTemps, legionellaBiocida, incendios, alerts, alertHistory, alertRepairs, activePools,
+      intervenciones, aforo,
+      addIntervencion, deleteIntervencion, upsertAforo, deleteAforoDay,
       thresholds, tempAguaThresholds, recircThresholds, contadoresThresholds,
       updateThresholds, updateTempAguaThresholds, updateRecircThresholds, updateContadoresThresholds,
       resetThresholds, resetTempAguaThresholds, resetRecircThresholds, resetContadoresThresholds,

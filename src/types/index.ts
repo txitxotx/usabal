@@ -5,7 +5,8 @@ export type Permission =
   | 'view_legionella' | 'view_incendios'
   | 'edit_piscinas' | 'edit_recirculacion' | 'edit_contadores'
   | 'edit_legionella' | 'edit_incendios'
-  | 'view_alerts' | 'manage_users' | 'export_data';
+  | 'view_alerts' | 'manage_users' | 'export_data'
+  | 'view_socorrista' | 'edit_socorrista';
 
 export interface User {
   id: string; name: string; email: string; password: string;
@@ -88,3 +89,31 @@ export interface IncendioCheck {
 export interface Threshold {
   parameter: string; pool?: PoolName; min: number; max: number; unit: string;
 }
+
+// ─── Socorrista ───────────────────────────────────────────────────────────────
+export interface IntervencionSocorrista {
+  id: string;
+  fechaHora: string;          // ISO datetime
+  edadPaciente: number | null;
+  motivo: string;
+  actuacion: string;
+  materiales: string;
+  notaFinal: string;
+  socorristaId: string;
+  socorristaName: string;
+  createdAt: string;
+}
+
+export interface AforoEntry {
+  id: string;
+  date: string;               // YYYY-MM-DD
+  hour: number;               // 7..22
+  pool: string;               // PoolName | nombre de sauna
+  cantidad: number;
+  socorristaId: string;
+  socorristaName: string;
+  updatedAt: string;
+}
+
+export const AFORO_SAUNAS = ['Sauna Seca 1', 'Sauna Seca 2', 'Sauna Húmeda', 'Terma'] as const;
+export const AFORO_HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22] as const;
