@@ -38,7 +38,6 @@ const ROLE_COLORS: Record<UserRole, string> = {
   socorrista: 'badge-info',
   readonly:   'badge-gray',
   sanidad:    'badge-ok',
-  socorrista: 'badge-info',
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
