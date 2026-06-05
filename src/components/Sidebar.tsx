@@ -27,7 +27,7 @@ export default function Sidebar({ open, onClose, dark = false }: SidebarProps) {
     { labelKey: 'nav_contadores',    path: '/dashboard/contadores',       icon: '📊', perm: 'view_contadores',    adminOnly: false },
     { labelKey: 'nav_legionella',    path: '/dashboard/legionella',       icon: '🧫', perm: 'view_legionella',    adminOnly: false },
     { labelKey: 'nav_incendios',     path: '/dashboard/incendios',        icon: '🔥', perm: 'view_incendios',     adminOnly: false },
-    { labelKey: 'nav_socorrista',    path: '/dashboard/socorrista',       icon: '🚑', perm: 'view_socorrista',    adminOnly: false },
+    { labelKey: 'nav_socorrista',    path: '/dashboard/socorrista',       icon: '🚑', perm: null,                 adminOnly: false },
     { labelKey: 'nav_alertas',       path: '/dashboard/alertas',          icon: '🔔', perm: 'view_alerts',        adminOnly: false },
     { labelKey: 'nav_usuarios',      path: '/dashboard/usuarios',         icon: '👥', perm: 'manage_users',       adminOnly: false },
     { labelKey: 'nav_configuracion', path: '/dashboard/configuracion',    icon: '⚙️', perm: null,                 adminOnly: true  },
